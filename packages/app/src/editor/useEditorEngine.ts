@@ -2,6 +2,7 @@ import type { Grade } from "@osmo/color-engine";
 import { GpuContext, GradeRenderer, parseCube } from "@osmo/color-engine";
 import type { ClipPlayerStats } from "@osmo/media-pipeline";
 import { ClipPlayer, Mp4Demuxer } from "@osmo/media-pipeline";
+import { ScopesRenderer } from "@osmo/scopes";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface EditorEngine {
@@ -16,6 +17,7 @@ export interface EditorEngine {
   applyGrade(grade: Grade): void;
   loadCreativeLut(file: File): Promise<void>;
   loadInputLut(file: File): Promise<void>;
+  attachScopes(hist: HTMLCanvasElement | null, wave: HTMLCanvasElement | null): void;
 }
 
 /**
@@ -33,6 +35,7 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
   const canvasCtxRef = useRef<GPUCanvasContext | null>(null);
   const playerRef = useRef<ClipPlayer | null>(null);
   const lastFrameRef = useRef<VideoFrame | null>(null);
+  const scopesRef = useRef<ScopesRenderer | null>(null);
 
   useEffect(() => {
     let disposed = false;
@@ -45,9 +48,13 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
         rendererRef.current = renderer;
         canvasCtxRef.current = ctx;
 
+        scopesRef.current = new ScopesRenderer(gpu.device, gpu.preferredFormat);
+
         const sink = {
           render: (frame: VideoFrame) => {
             renderer.render(frame, ctx);
+            const inter = renderer.intermediateTexture;
+            if (inter) scopesRef.current?.update(inter);
             lastFrameRef.current?.close();
             try {
               lastFrameRef.current = frame.clone();
@@ -78,6 +85,8 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
     const state = playerRef.current?.state;
     if (frame && renderer && ctx && state !== "playing") {
       renderer.render(frame, ctx);
+      const inter = renderer.intermediateTexture;
+      if (inter) scopesRef.current?.update(inter);
     }
   }, []);
 
@@ -110,6 +119,13 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
     loadInputLut: useCallback(
       async (file: File) => {
         rendererRef.current?.setInputLut(parseCube(await file.text()));
+        rerenderPaused();
+      },
+      [rerenderPaused],
+    ),
+    attachScopes: useCallback(
+      (hist: HTMLCanvasElement | null, wave: HTMLCanvasElement | null) => {
+        scopesRef.current?.attachCanvases(hist, wave);
         rerenderPaused();
       },
       [rerenderPaused],

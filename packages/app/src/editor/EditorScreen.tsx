@@ -10,11 +10,20 @@ const gradeStore = new IdbGradeStore();
 
 export function EditorScreen() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const histRef = useRef<HTMLCanvasElement>(null);
+  const waveRef = useRef<HTMLCanvasElement>(null);
   const engine = useEditorEngine(canvasRef);
   const [grade, setGrade] = useState<Grade>(() => defaultGrade());
   const [clipKey, setClipKey] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [showScopes, setShowScopes] = useState(true);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (engine.ready) {
+      engine.attachScopes(showScopes ? histRef.current : null, showScopes ? waveRef.current : null);
+    }
+  }, [engine, engine.ready, showScopes]);
 
   // Grade → engine + debounced persistence
   const updateGrade = useCallback(
@@ -134,6 +143,27 @@ export function EditorScreen() {
           />
         </div>
 
+        {/* scopes strip */}
+        {showScopes && (
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              padding: "8px 16px 0",
+              alignItems: "flex-end",
+            }}
+          >
+            <figure style={scopeFigure}>
+              <canvas ref={histRef} width={256} height={110} style={scopeCanvas} />
+              <figcaption style={scopeCaption}>直方图 RGB</figcaption>
+            </figure>
+            <figure style={scopeFigure}>
+              <canvas ref={waveRef} width={512} height={110} style={{ ...scopeCanvas, width: 320 }} />
+              <figcaption style={scopeCaption}>波形 · 亮度</figcaption>
+            </figure>
+          </div>
+        )}
+
         {/* transport bar */}
         <div
           style={{
@@ -146,6 +176,13 @@ export function EditorScreen() {
         >
           <button onClick={() => (playing ? engine.pause() : engine.play())} style={transportBtn}>
             {playing ? "⏸" : "▶"}
+          </button>
+          <button
+            onClick={() => setShowScopes(!showScopes)}
+            style={{ ...transportBtn, color: showScopes ? tokens.color.accent : tokens.color.textDim }}
+            title="示波器"
+          >
+            📊
           </button>
           <button onClick={engine.stepForward} style={transportBtn} title="逐帧 →">
             ⏭
@@ -217,6 +254,23 @@ export function EditorScreen() {
     </div>
   );
 }
+
+const scopeFigure: React.CSSProperties = { margin: 0 };
+
+const scopeCanvas: React.CSSProperties = {
+  width: 200,
+  height: 90,
+  background: "#000",
+  borderRadius: 6,
+  border: `1px solid ${tokens.color.border}`,
+  display: "block",
+};
+
+const scopeCaption: React.CSSProperties = {
+  fontSize: 10,
+  color: tokens.color.textDim,
+  marginTop: 2,
+};
 
 const transportBtn: React.CSSProperties = {
   background: tokens.color.surfaceRaised,

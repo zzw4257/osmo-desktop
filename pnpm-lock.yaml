@@ -103,6 +103,9 @@ importers:
       '@osmo/platform':
         specifier: workspace:*
         version: link:../platform
+      '@osmo/scopes':
+        specifier: workspace:*
+        version: link:../scopes
       '@osmo/shared':
         specifier: workspace:*
         version: link:../shared
