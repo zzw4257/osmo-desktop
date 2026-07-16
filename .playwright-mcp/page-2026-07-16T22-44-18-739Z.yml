@@ -1,0 +1,90 @@
+- generic [ref=f5e3]:
+  - generic [ref=f5e4]:
+    - banner [ref=f5e5]:
+      - heading "OSMO Desktop" [level=1] [ref=f5e6]
+      - generic [ref=f5e7]: 未加载素材
+      - generic [ref=f5e8] [cursor=pointer]: 打开视频
+    - generic [ref=f5e11]:
+      - button "▶" [ref=f5e12] [cursor=pointer]
+      - button "⏭" [ref=f5e13] [cursor=pointer]
+      - slider [ref=f5e14]: "0"
+      - generic [ref=f5e15]: 0:00 / 0:00
+  - complementary [ref=f5e16]:
+    - generic [ref=f5e17]:
+      - text: 调色
+      - button "全部重置" [ref=f5e18] [cursor=pointer]
+    - generic [ref=f5e19]:
+      - generic [ref=f5e20]:
+        - generic [ref=f5e21] [cursor=pointer]:
+          - generic [ref=f5e22]: ▶
+          - generic [ref=f5e23]: 色彩还原
+          - generic [ref=f5e24]: UNKNOWN
+        - generic [ref=f5e26]:
+          - combobox [ref=f5e27]:
+            - option "普通 (Rec.709)" [selected]
+            - option "D-Log（Pocket 4 · 官方公式）"
+            - option "D-Log M（Pocket 3 · 需导入 LUT）"
+            - option "D-Log 2（Pocket 4P · 需导入 LUT）"
+            - option "HLG（M2 支持）"
+          - generic [ref=f5e28]:
+            - generic [ref=f5e29]:
+              - generic [ref=f5e30]: 还原强度
+              - generic [ref=f5e31]: "+100"
+            - slider "还原强度" [ref=f5e32] [cursor=pointer]: "100"
+      - generic [ref=f5e34] [cursor=pointer]:
+        - generic [ref=f5e35]: ▶
+        - generic [ref=f5e36]: 白平衡
+      - generic [ref=f5e37]:
+        - generic [ref=f5e38] [cursor=pointer]:
+          - generic [ref=f5e39]: ▶
+          - generic [ref=f5e40]: 影调
+          - button "⟲" [ref=f5e41]
+        - generic [ref=f5e42]:
+          - generic [ref=f5e43]:
+            - generic [ref=f5e44]:
+              - generic [ref=f5e45]: 曝光
+              - generic [ref=f5e46]: 0.00 EV
+            - slider "曝光" [ref=f5e47] [cursor=pointer]: "0"
+          - generic [ref=f5e48]:
+            - generic [ref=f5e49]:
+              - generic [ref=f5e50]: 对比度
+              - generic [ref=f5e51]: "0"
+            - slider "对比度" [ref=f5e52] [cursor=pointer]: "0"
+          - generic [ref=f5e53]:
+            - generic [ref=f5e54]:
+              - generic [ref=f5e55]: 高光
+              - generic [ref=f5e56]: "0"
+            - slider "高光" [ref=f5e57] [cursor=pointer]: "0"
+          - generic [ref=f5e58]:
+            - generic [ref=f5e59]:
+              - generic [ref=f5e60]: 阴影
+              - generic [ref=f5e61]: "0"
+            - slider "阴影" [ref=f5e62] [cursor=pointer]: "0"
+          - generic [ref=f5e63]:
+            - generic [ref=f5e64]:
+              - generic [ref=f5e65]: 白色
+              - generic [ref=f5e66]: "0"
+            - slider "白色" [ref=f5e67] [cursor=pointer]: "0"
+          - generic [ref=f5e68]:
+            - generic [ref=f5e69]:
+              - generic [ref=f5e70]: 黑色
+              - generic [ref=f5e71]: "0"
+            - slider "黑色" [ref=f5e72] [cursor=pointer]: "0"
+      - generic [ref=f5e74] [cursor=pointer]:
+        - generic [ref=f5e75]: ▶
+        - generic [ref=f5e76]: 色轮
+      - generic [ref=f5e78] [cursor=pointer]:
+        - generic [ref=f5e79]: ▶
+        - generic [ref=f5e80]: 曲线
+      - generic [ref=f5e82] [cursor=pointer]:
+        - generic [ref=f5e83]: ▶
+        - generic [ref=f5e84]: HSL 分区
+      - generic [ref=f5e86] [cursor=pointer]:
+        - generic [ref=f5e87]: ▶
+        - generic [ref=f5e88]: 色彩
+      - generic [ref=f5e90] [cursor=pointer]:
+        - generic [ref=f5e91]: ▶
+        - generic [ref=f5e92]: 创意 LUT
+      - generic [ref=f5e94] [cursor=pointer]:
+        - generic [ref=f5e95]: ▶
+        - generic [ref=f5e96]: 效果

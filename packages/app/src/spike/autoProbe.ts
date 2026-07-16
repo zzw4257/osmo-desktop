@@ -8,9 +8,18 @@ export async function probeFile(file: Blob): Promise<PrecisionReport> {
   const demuxer = await Mp4Demuxer.open(file);
   const config = demuxer.decoderConfig();
   const frame = await new Promise<VideoFrame>((resolve, reject) => {
+    let first = false;
     const session = new VideoDecodeSession(
       config,
-      (f) => resolve(f),
+      (f) => {
+        // Keep only the first frame; close the rest or they leak.
+        if (!first) {
+          first = true;
+          resolve(f);
+        } else {
+          f.close();
+        }
+      },
       reject,
     );
     demuxer
