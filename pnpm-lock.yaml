@@ -26,6 +26,9 @@ importers:
       typescript-eslint:
         specifier: ^8.5.0
         version: 8.64.0(eslint@9.39.5)(typescript@5.9.3)
+      vite:
+        specifier: ^5.4.8
+        version: 5.4.21(@types/node@22.20.1)
       vitest:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.1)
@@ -131,7 +134,14 @@ importers:
 
   packages/device-core: {}
 
-  packages/media-pipeline: {}
+  packages/media-pipeline:
+    dependencies:
+      '@osmo/shared':
+        specifier: workspace:*
+        version: link:../shared
+      mp4box:
+        specifier: ^0.5.2
+        version: 0.5.4
 
   packages/platform: {}
 
@@ -1124,6 +1134,9 @@ packages:
 
   minimatch@3.1.5:
     resolution: {integrity: sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w==}
+
+  mp4box@0.5.4:
+    resolution: {integrity: sha512-GcCH0fySxBurJtvr0dfhz0IxHZjc1RP+F+I8xw+LIwkU1a+7HJx8NCDiww1I5u4Hz6g4eR1JlGADEGJ9r4lSfA==}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -2275,6 +2288,8 @@ snapshots:
   minimatch@3.1.5:
     dependencies:
       brace-expansion: 1.1.16
+
+  mp4box@0.5.4: {}
 
   ms@2.1.3: {}
 

@@ -9,3 +9,4 @@ coverage/
 .env
 .vite/
 gen/schemas/
+samples/

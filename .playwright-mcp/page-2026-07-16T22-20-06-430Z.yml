@@ -1,0 +1,41 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - heading "OSMO Desktop" [level=1] [ref=e5]
+    - generic [ref=e6]: M0 · 播放技术竖切
+  - generic [ref=e7]:
+    - generic [ref=e8]: ✓ WebGPU
+    - generic [ref=e9]: ✓ WebCodecs
+    - generic [ref=e10]: ✓ HEVC Main10 解码
+    - generic [ref=e11]: ✓ OffscreenCanvas
+    - generic [ref=e12]: ✓ File System Access
+    - generic [ref=e13]: ✗ Tauri 环境
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e16] [cursor=pointer]: 选择视频文件
+      - button "重新播放" [ref=e17] [cursor=pointer]
+      - button "自检中…" [disabled] [ref=e22] [cursor=pointer]
+    - generic [ref=e20]:
+      - generic [ref=e23]:
+        - generic [ref=e24]: 状态
+        - text: playing
+      - generic [ref=e25]:
+        - generic [ref=e26]: 编码
+        - text: hvc1.2.4.L156.b0
+      - generic [ref=e27]:
+        - generic [ref=e28]: 分辨率
+        - text: 3840×2160
+      - generic [ref=e29]:
+        - generic [ref=e30]: 呈现帧率
+        - text: 2 fps
+      - generic [ref=e31]:
+        - generic [ref=e32]: 已呈现
+        - text: "2"
+      - generic [ref=e33]:
+        - generic [ref=e34]: 丢帧
+        - text: "0"
+      - generic [ref=e35]:
+        - generic [ref=e36]: 解码队列
+        - text: "6"
+      - generic [ref=e37]:
+        - generic [ref=e38]: 帧队列
+        - text: "1"

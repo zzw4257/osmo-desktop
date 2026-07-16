@@ -1,15 +1,20 @@
 import { useEffect, useState } from "react";
+import { autoProbeAndReport } from "./spike/autoProbe";
+import { PlayerSpike } from "./spike/PlayerSpike";
 
 /**
  * Application shell shared by apps/desktop and apps/web.
- * M0: capability probe screen — verifies the WebCodecs/WebGPU foundation the
- * whole product stands on, in both shells. The player spike mounts here next.
+ * M0: capability probe strip + playback spike. The real media-library /
+ * editor navigation replaces this in M1.
  */
 export function App() {
   const [report, setReport] = useState<CapabilityReport | null>(null);
 
   useEffect(() => {
     probeCapabilities().then(setReport);
+    // Startup pipeline-integrity probe; reports to the dev terminal when a
+    // sink is present, silently no-ops in production.
+    void autoProbeAndReport();
   }, []);
 
   return (
@@ -22,28 +27,26 @@ export function App() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        gap: 12,
+        padding: "24px 0 48px",
+        gap: 16,
       }}
     >
-      <h1 style={{ color: "#ff6a00", fontSize: 24, margin: 0 }}>OSMO Desktop</h1>
-      <p style={{ opacity: 0.7, margin: 0 }}>M0 · 平台能力自检</p>
-      {report === null ? (
-        <p>探测中…</p>
-      ) : (
-        <table style={{ borderCollapse: "collapse", fontSize: 14 }}>
-          <tbody>
-            {Object.entries(report).map(([k, v]) => (
-              <tr key={k}>
-                <td style={{ padding: "4px 16px", opacity: 0.7 }}>{k}</td>
-                <td style={{ padding: "4px 16px", color: v ? "#6fdd8b" : "#ff5f57" }}>
-                  {v ? "✓ 可用" : "✗ 不可用"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <header style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
+        <h1 style={{ color: "#ff6a00", fontSize: 22, margin: 0 }}>OSMO Desktop</h1>
+        <span style={{ opacity: 0.6, fontSize: 13 }}>M0 · 播放技术竖切</span>
+      </header>
+
+      {report && (
+        <div style={{ display: "flex", gap: 16, fontSize: 12, flexWrap: "wrap" }}>
+          {Object.entries(report).map(([k, v]) => (
+            <span key={k} style={{ color: v ? "#6fdd8b" : "#ff5f57" }}>
+              {v ? "✓" : "✗"} {k}
+            </span>
+          ))}
+        </div>
       )}
+
+      <PlayerSpike />
     </div>
   );
 }

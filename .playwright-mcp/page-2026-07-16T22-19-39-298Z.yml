@@ -1,0 +1,17 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - heading "OSMO Desktop" [level=1] [ref=e5]
+    - generic [ref=e6]: M0 · 播放技术竖切
+  - generic [ref=e7]:
+    - generic [ref=e8]: ✓ WebGPU
+    - generic [ref=e9]: ✓ WebCodecs
+    - generic [ref=e10]: ✓ HEVC Main10 解码
+    - generic [ref=e11]: ✓ OffscreenCanvas
+    - generic [ref=e12]: ✓ File System Access
+    - generic [ref=e13]: ✗ Tauri 环境
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e16] [cursor=pointer]: 选择视频文件
+      - button "重新播放" [disabled] [ref=e17] [cursor=pointer]
+      - button "10-bit 精度自检" [disabled] [ref=e18] [cursor=pointer]
+    - generic [ref=e20]: 选择一个 4K HEVC 10-bit 样片开始（samples/ 目录）
