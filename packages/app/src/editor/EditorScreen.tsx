@@ -8,7 +8,13 @@ import { useEditorEngine } from "./useEditorEngine";
 
 const gradeStore = new IdbGradeStore();
 
-export function EditorScreen() {
+export interface EditorScreenProps {
+  /** Open with this clip (from the library); user can still 打开视频. */
+  initialClip?: { file: File; key: string; name: string } | undefined;
+  onBack?: (() => void) | undefined;
+}
+
+export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const histRef = useRef<HTMLCanvasElement>(null);
   const waveRef = useRef<HTMLCanvasElement>(null);
@@ -38,12 +44,9 @@ export function EditorScreen() {
     [engine, clipKey],
   );
 
-  const onPickFile = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const key = clipKeyForFile(file);
-      setFileName(file.name);
+  const openClip = useCallback(
+    async (file: File, key: string, name: string) => {
+      setFileName(name);
       setClipKey(key);
       const restored = (await gradeStore.load(key)) ?? defaultGrade();
       setGrade(restored);
@@ -52,6 +55,24 @@ export function EditorScreen() {
     },
     [engine],
   );
+
+  const onPickFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await openClip(file, clipKeyForFile(file), file.name);
+    },
+    [openClip],
+  );
+
+  // Clip handed over from the library
+  const initialLoaded = useRef(false);
+  useEffect(() => {
+    if (initialClip && engine.ready && !initialLoaded.current) {
+      initialLoaded.current = true;
+      void openClip(initialClip.file, initialClip.key, initialClip.name);
+    }
+  }, [initialClip, engine.ready, openClip]);
 
   // Keyboard transport: space = play/pause, arrows = step/seek
   useEffect(() => {
@@ -96,6 +117,11 @@ export function EditorScreen() {
             borderBottom: `1px solid ${tokens.color.border}`,
           }}
         >
+          {onBack && (
+            <button onClick={onBack} style={transportBtn} title="返回素材库">
+              ←
+            </button>
+          )}
           <h1 style={{ color: tokens.color.accent, fontSize: 16, margin: 0, fontWeight: 700 }}>
             OSMO Desktop
           </h1>
