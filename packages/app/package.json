@@ -1,0 +1,27 @@
+{
+  "name": "@osmo/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@osmo/color-engine": "workspace:*",
+    "@osmo/device-core": "workspace:*",
+    "@osmo/media-pipeline": "workspace:*",
+    "@osmo/platform": "workspace:*",
+    "@osmo/shared": "workspace:*",
+    "@osmo/storage": "workspace:*",
+    "@osmo/ui": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "osmo-desktop-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.11.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @osmo/web dev",
+    "dev:desktop": "pnpm --filter @osmo/desktop tauri dev",
+    "build:web": "pnpm --filter @osmo/web build",
+    "build:desktop": "pnpm --filter @osmo/desktop tauri build",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@webgpu/types": "^0.1.44",
+    "@types/node": "^22.5.0",
+    "eslint": "^9.9.0",
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.5.0",
+    "vitest": "^2.1.1"
+  }
+}
