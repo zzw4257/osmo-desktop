@@ -19,7 +19,8 @@
     "@osmo/ui": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@osmo/scopes": "workspace:*"
+    "@osmo/scopes": "workspace:*",
+    "@osmo/presets": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^18.3.5",

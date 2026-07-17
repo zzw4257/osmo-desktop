@@ -1,5 +1,6 @@
 import type { Grade, HslBand } from "@osmo/color-engine";
 import { HSL_BANDS, bakeCurveLut, defaultOps } from "@osmo/color-engine";
+import { FILTER_PRESETS, applyPreset } from "@osmo/presets";
 import type { ColorProfile } from "@osmo/shared";
 import { ColorWheel, CurveEditor, Section, Slider, tokens } from "@osmo/ui";
 import { useState } from "react";
@@ -103,6 +104,46 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
             onChange={(v) => patchInput({ strength: v / 100 })}
           />
         </div>
+      </Section>
+
+      <Section
+        title="滤镜"
+        defaultOpen
+        badge={
+          grade.presetId
+            ? FILTER_PRESETS.find((p) => p.id === grade.presetId)?.name
+            : undefined
+        }
+      >
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {FILTER_PRESETS.map((p) => {
+            const active = (grade.presetId ?? "none") === p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={() =>
+                  onChange({
+                    ...grade,
+                    presetId: p.id === "none" ? null : p.id,
+                    ops: applyPreset(ops, p),
+                  })
+                }
+                style={{
+                  ...chipStyle,
+                  padding: "5px 12px",
+                  borderColor: active ? tokens.color.accent : tokens.color.border,
+                  color: active ? tokens.color.accent : tokens.color.textDim,
+                  background: active ? "rgba(255,106,0,0.10)" : "transparent",
+                }}
+              >
+                {p.name}
+              </button>
+            );
+          })}
+        </div>
+        <p style={{ fontSize: 10, color: tokens.color.textDim, margin: "8px 0 0" }}>
+          滤镜只写入风格参数，套用后所有项仍可继续微调
+        </p>
       </Section>
 
       <Section title="白平衡" onReset={() => patch({ whiteBalance: d.whiteBalance })}>

@@ -95,6 +95,8 @@ export interface Grade {
   ops: GradeOps;
   /** Content hashes of every LUT this grade references, for share bundles. */
   lutRefs: string[];
+  /** Active built-in filter preset (presets package), null = 原片/custom. */
+  presetId: string | null;
 }
 
 const neutralWheel = (): WheelValue => [0, 0, 0, 0];
@@ -129,6 +131,7 @@ export function defaultGrade(profile: ColorProfile = "unknown"): Grade {
     input: { profile, inputLut: null, strength: 1 },
     ops: defaultOps(),
     lutRefs: [],
+    presetId: null,
   };
 }
 
@@ -156,6 +159,7 @@ export function hydrateGrade(stored: unknown): Grade {
     input: { ...base.input, ...(s.input ?? {}) },
     ops,
     lutRefs: Array.isArray(s.lutRefs) ? s.lutRefs : [],
+    presetId: typeof s.presetId === "string" ? s.presetId : null,
   };
 }
 

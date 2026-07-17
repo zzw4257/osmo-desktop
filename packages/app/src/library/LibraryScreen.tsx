@@ -10,6 +10,12 @@ import {
 import { tokens } from "@osmo/ui";
 import { useCallback, useEffect, useState } from "react";
 import { IdbGradeStore } from "../editor/gradeStore";
+import {
+  ensureFsaPermission,
+  loadActiveSource,
+  loadExportedKeys,
+  saveActiveSource,
+} from "./libraryStore";
 import { scanNativeFolder } from "./nativeScan";
 import type { LibraryClip } from "./scanFolder";
 import { scanDirectory, scanFileList } from "./scanFolder";
@@ -29,11 +35,39 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
   const [volumes, setVolumes] = useState<DjiVolume[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteReport, setDeleteReport] = useState<string | null>(null);
+  const [exportedKeys, setExportedKeys] = useState<Set<string>>(new Set());
   const supportsPicker = isTauri() || typeof window.showDirectoryPicker === "function";
 
   useEffect(() => {
     void gradeStore.listKeys().then((keys) => setGradedKeys(new Set(keys)));
+    void loadExportedKeys().then(setExportedKeys);
   }, [clips]);
+
+  // Restore the last folder association on launch (both shells).
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const source = await loadActiveSource().catch(() => null);
+      if (!source || !alive) return;
+      try {
+        setBusy(true);
+        if (source.kind === "native" && isTauri()) {
+          setFolderName(source.name);
+          setClips(await scanNativeFolder(source.path));
+        } else if (source.kind === "fsa" && (await ensureFsaPermission(source.handle))) {
+          setFolderName(source.name);
+          setClips(await scanDirectory(source.handle));
+        }
+      } catch {
+        // stale association (folder moved / permission denied) — start empty
+      } finally {
+        if (alive) setBusy(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // DJI device plug/unplug (desktop only)
   useEffect(() => {
@@ -98,14 +132,18 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
       if (isTauri()) {
         const root = await pickFolderNative();
         if (root) {
-          setFolderName(root.split("/").pop() ?? root);
+          const name = root.split("/").pop() ?? root;
+          setFolderName(name);
           setClips(await scanNativeFolder(root));
+          void saveActiveSource({ kind: "native", path: root, name });
         }
         return;
       }
       const handle = await window.showDirectoryPicker!({ id: "osmo-library", mode: "read" });
-      setFolderName((handle as unknown as { name?: string }).name ?? "已选文件夹");
+      const name = (handle as unknown as { name?: string }).name ?? "已选文件夹";
+      setFolderName(name);
       setClips(await scanDirectory(handle));
+      void saveActiveSource({ kind: "fsa", handle, name });
     } catch {
       // user cancelled
     } finally {
@@ -256,6 +294,7 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
               key={clip.key}
               clip={clip}
               graded={gradedKeys.has(clip.key)}
+              exported={exportedKeys.has(clip.key)}
               selected={selected.has(clip.key)}
               selectable={clip.srcPath !== null && isTauri()}
               onToggleSelect={() => toggleSelect(clip.key)}
@@ -271,6 +310,7 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
 function ClipCard({
   clip,
   graded,
+  exported,
   selected,
   selectable,
   onToggleSelect,
@@ -278,6 +318,7 @@ function ClipCard({
 }: {
   clip: LibraryClip;
   graded: boolean;
+  exported: boolean;
   selected: boolean;
   selectable: boolean;
   onToggleSelect: () => void;
@@ -325,6 +366,7 @@ function ClipCard({
           {clip.isDji && <Badge text="DJI" color={tokens.color.accent} />}
           {clip.hasLrf && <Badge text="LRF" color="#5cb2ff" />}
           {graded && <Badge text="已调色" color={tokens.color.good} />}
+          {exported && <Badge text="已导出" color="#b78aff" />}
         </div>
         {selectable && (
           <input

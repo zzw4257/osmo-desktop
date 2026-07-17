@@ -3,6 +3,7 @@ import { buildExportPayload, defaultGrade, parseCube } from "@osmo/color-engine"
 import { exportBeginNative, exportCancelNative, isTauri, pickSavePathNative } from "@osmo/platform";
 import { tokens } from "@osmo/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { markClipExported } from "../library/libraryStore";
 import { AdjustPanel } from "./AdjustPanel";
 import { IdbGradeStore, clipKeyForFile } from "./gradeStore";
 import type { LoadedClipInfo } from "./useEditorEngine";
@@ -197,6 +198,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
             setExportState((s) =>
               s ? { ...s, frame: ev.frames, totalFrames: ev.frames, status: "done" } : s,
             );
+            if (clipKey) void markClipExported(clipKey, outPath);
           } else {
             setExportState((s) => (s ? { ...s, status: "error", message: ev.message } : s));
           }
@@ -206,7 +208,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
     } catch (e) {
       setExportState((s) => (s ? { ...s, status: "error", message: String(e) } : s));
     }
-  }, [srcPath, clipInfo, fileName, grade, inputCube, creativeCube]);
+  }, [srcPath, clipInfo, fileName, grade, inputCube, creativeCube, clipKey]);
 
   // Keyboard: space = play/pause, → = step, ⌘Z/⇧⌘Z = undo/redo
   useEffect(() => {
