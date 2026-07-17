@@ -1,4 +1,5 @@
 pub mod export;
+pub mod scan;
 
 use export::{ExportArgs, ExportEvent};
 use std::collections::HashMap;
@@ -44,7 +45,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(ExportJobs::default())
-        .invoke_handler(tauri::generate_handler![export_begin, export_cancel])
+        .invoke_handler(tauri::generate_handler![export_begin, export_cancel, scan::scan_media_dir])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

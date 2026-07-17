@@ -10,8 +10,11 @@ export interface LibraryClip {
   shotAt: number | null;
   isDji: boolean;
   hasLrf: boolean;
-  getFile(): Promise<File>;
-  getLrf(): Promise<File | null>;
+  /** Absolute filesystem path — only known on the desktop (native scan);
+   * enables the native export pipeline. */
+  srcPath: string | null;
+  getFile(): Promise<Blob>;
+  getLrf(): Promise<Blob | null>;
 }
 
 const MAX_DEPTH = 5;
@@ -91,6 +94,7 @@ async function buildClips(entries: RawEntry[]): Promise<LibraryClip[]> {
       shotAt: parsed?.shotAt ?? null,
       isDji: parsed !== null,
       hasLrf: !!lrfEntry,
+      srcPath: null,
       getFile: e.open,
       getLrf: lrfEntry ? lrfEntry.open : () => Promise.resolve(null),
     });

@@ -1,17 +1,28 @@
-import type { Grade } from "@osmo/color-engine";
-import { defaultGrade } from "@osmo/color-engine";
+import type { Cube3dLut, Grade } from "@osmo/color-engine";
+import { buildExportPayload, defaultGrade, parseCube } from "@osmo/color-engine";
+import { exportBeginNative, exportCancelNative, isTauri, pickSavePathNative } from "@osmo/platform";
 import { tokens } from "@osmo/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AdjustPanel } from "./AdjustPanel";
 import { IdbGradeStore, clipKeyForFile } from "./gradeStore";
+import type { LoadedClipInfo } from "./useEditorEngine";
 import { useEditorEngine } from "./useEditorEngine";
 
 const gradeStore = new IdbGradeStore();
 
 export interface EditorScreenProps {
   /** Open with this clip (from the library); user can still 打开视频. */
-  initialClip?: { file: File; key: string; name: string } | undefined;
+  initialClip?: { file: Blob; key: string; name: string; srcPath: string | null } | undefined;
   onBack?: (() => void) | undefined;
+}
+
+interface ExportState {
+  jobId: number | null;
+  frame: number;
+  totalFrames: number;
+  status: "running" | "done" | "error";
+  message?: string;
+  outPath: string;
 }
 
 export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
@@ -23,6 +34,11 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
   const [clipKey, setClipKey] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [showScopes, setShowScopes] = useState(true);
+  const [clipInfo, setClipInfo] = useState<LoadedClipInfo | null>(null);
+  const [srcPath, setSrcPath] = useState<string | null>(null);
+  const [inputCube, setInputCube] = useState<Cube3dLut | null>(null);
+  const [creativeCube, setCreativeCube] = useState<Cube3dLut | null>(null);
+  const [exportState, setExportState] = useState<ExportState | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -45,13 +61,14 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
   );
 
   const openClip = useCallback(
-    async (file: File, key: string, name: string) => {
+    async (file: Blob, key: string, name: string, src: string | null) => {
       setFileName(name);
       setClipKey(key);
+      setSrcPath(src);
       const restored = (await gradeStore.load(key)) ?? defaultGrade();
       setGrade(restored);
       engine.applyGrade(restored);
-      await engine.loadFile(file);
+      setClipInfo(await engine.loadFile(file));
     },
     [engine],
   );
@@ -60,7 +77,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      await openClip(file, clipKeyForFile(file), file.name);
+      await openClip(file, clipKeyForFile(file), file.name, null);
     },
     [openClip],
   );
@@ -70,9 +87,65 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
   useEffect(() => {
     if (initialClip && engine.ready && !initialLoaded.current) {
       initialLoaded.current = true;
-      void openClip(initialClip.file, initialClip.key, initialClip.name);
+      void openClip(initialClip.file, initialClip.key, initialClip.name, initialClip.srcPath);
     }
   }, [initialClip, engine.ready, openClip]);
+
+  const onPickInputLut = useCallback(
+    async (file: File) => {
+      const cube = parseCube(await file.text());
+      setInputCube(cube);
+      engine.applyInputLut(cube);
+    },
+    [engine],
+  );
+
+  const onPickCreativeLut = useCallback(
+    async (file: File) => {
+      const cube = parseCube(await file.text());
+      setCreativeCube(cube);
+      engine.applyCreativeLut(cube);
+    },
+    [engine],
+  );
+
+  const canExport = isTauri() && srcPath !== null && clipInfo !== null && fileName !== null;
+
+  const onExport = useCallback(async () => {
+    if (!srcPath || !clipInfo || !fileName) return;
+    const outPath = await pickSavePathNative(fileName.replace(/\.\w+$/, "") + "_graded.mp4");
+    if (!outPath) return;
+    const payload = buildExportPayload(grade, inputCube, creativeCube);
+    const totalFrames = Math.max(1, Math.round((clipInfo.durationUs / 1e6) * clipInfo.fps));
+    setExportState({ jobId: null, frame: 0, totalFrames, status: "running", outPath });
+    try {
+      const jobId = await exportBeginNative(
+        {
+          srcPath,
+          outPath,
+          width: clipInfo.width,
+          height: clipInfo.height,
+          fps: clipInfo.fps,
+          bitrateMbps: 50,
+          ...payload,
+        },
+        (ev) => {
+          if (ev.type === "progress") {
+            setExportState((s) => (s ? { ...s, frame: ev.frame } : s));
+          } else if (ev.type === "done") {
+            setExportState((s) =>
+              s ? { ...s, frame: ev.frames, totalFrames: ev.frames, status: "done" } : s,
+            );
+          } else {
+            setExportState((s) => (s ? { ...s, status: "error", message: ev.message } : s));
+          }
+        },
+      );
+      setExportState((s) => (s ? { ...s, jobId } : s));
+    } catch (e) {
+      setExportState((s) => (s ? { ...s, status: "error", message: String(e) } : s));
+    }
+  }, [srcPath, clipInfo, fileName, grade, inputCube, creativeCube]);
 
   // Keyboard transport: space = play/pause, arrows = step/seek
   useEffect(() => {
@@ -129,10 +202,28 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
             {fileName ?? "未加载素材"}
           </span>
           <div style={{ flex: 1 }} />
+          {canExport && (
+            <button
+              onClick={onExport}
+              disabled={exportState?.status === "running"}
+              style={{
+                background: tokens.color.accent,
+                color: "#141414",
+                fontWeight: 600,
+                borderRadius: tokens.radius.sm,
+                padding: "6px 14px",
+                cursor: "pointer",
+                fontSize: 13,
+                border: "none",
+              }}
+            >
+              {exportState?.status === "running" ? "导出中…" : "导出 10-bit"}
+            </button>
+          )}
           <label
             style={{
-              background: tokens.color.accent,
-              color: "#141414",
+              background: canExport ? tokens.color.surfaceRaised : tokens.color.accent,
+              color: canExport ? tokens.color.text : "#141414",
               fontWeight: 600,
               borderRadius: tokens.radius.sm,
               padding: "6px 14px",
@@ -273,10 +364,84 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
         <AdjustPanel
           grade={grade}
           onChange={updateGrade}
-          onPickCreativeLut={(f) => void engine.loadCreativeLut(f)}
-          onPickInputLut={(f) => void engine.loadInputLut(f)}
+          onPickCreativeLut={(f) => void onPickCreativeLut(f)}
+          onPickInputLut={(f) => void onPickInputLut(f)}
         />
       </aside>
+
+      {exportState && (
+        <div
+          style={{
+            position: "fixed",
+            right: 316,
+            bottom: 16,
+            width: 300,
+            background: tokens.color.surfaceRaised,
+            border: `1px solid ${tokens.color.border}`,
+            borderRadius: tokens.radius.md,
+            padding: 14,
+            fontSize: 12,
+            boxShadow: "0 8px 30px rgba(0,0,0,0.5)",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <strong>
+              {exportState.status === "running"
+                ? "导出中"
+                : exportState.status === "done"
+                  ? "✓ 导出完成"
+                  : "✗ 导出失败"}
+            </strong>
+            <button
+              onClick={() => {
+                if (exportState.status === "running" && exportState.jobId !== null) {
+                  void exportCancelNative(exportState.jobId);
+                }
+                setExportState(null);
+              }}
+              style={{
+                background: "none",
+                border: "none",
+                color: tokens.color.textDim,
+                cursor: "pointer",
+              }}
+            >
+              {exportState.status === "running" ? "取消" : "关闭"}
+            </button>
+          </div>
+          {exportState.status === "error" ? (
+            <div style={{ color: tokens.color.bad, wordBreak: "break-all" }}>
+              {exportState.message}
+            </div>
+          ) : (
+            <>
+              <div
+                style={{
+                  height: 6,
+                  borderRadius: 3,
+                  background: tokens.color.border,
+                  overflow: "hidden",
+                  marginBottom: 6,
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${Math.min(100, (exportState.frame / exportState.totalFrames) * 100)}%`,
+                    background:
+                      exportState.status === "done" ? tokens.color.good : tokens.color.accent,
+                    transition: "width 0.3s",
+                  }}
+                />
+              </div>
+              <div style={{ color: tokens.color.textDim }}>
+                {exportState.frame}/{exportState.totalFrames} 帧 ·{" "}
+                <span style={{ wordBreak: "break-all" }}>{exportState.outPath}</span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

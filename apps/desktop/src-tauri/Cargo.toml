@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Desktop companion for DJI Pocket cameras: import, grade, export"
 authors = ["zzw4257"]
 edition = "2021"
+default-run = "osmo-desktop"
 
 [lib]
 name = "osmo_desktop_lib"
@@ -17,7 +18,7 @@ path = "src/bin/export_cli.rs"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }

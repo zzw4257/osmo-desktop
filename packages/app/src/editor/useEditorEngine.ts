@@ -1,22 +1,29 @@
-import type { Grade } from "@osmo/color-engine";
-import { GpuContext, GradeRenderer, parseCube } from "@osmo/color-engine";
+import type { Cube3dLut, Grade } from "@osmo/color-engine";
+import { GpuContext, GradeRenderer } from "@osmo/color-engine";
 import type { ClipPlayerStats } from "@osmo/media-pipeline";
 import { ClipPlayer, Mp4Demuxer } from "@osmo/media-pipeline";
 import { ScopesRenderer } from "@osmo/scopes";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+export interface LoadedClipInfo {
+  width: number;
+  height: number;
+  fps: number;
+  durationUs: number;
+}
+
 export interface EditorEngine {
   ready: boolean;
   error: string | null;
   stats: ClipPlayerStats | null;
-  loadFile(file: File): Promise<void>;
+  loadFile(file: Blob): Promise<LoadedClipInfo>;
   play(): void;
   pause(): void;
   stepForward(): void;
   seek(us: number): void;
   applyGrade(grade: Grade): void;
-  loadCreativeLut(file: File): Promise<void>;
-  loadInputLut(file: File): Promise<void>;
+  applyCreativeLut(cube: Cube3dLut | null): void;
+  applyInputLut(cube: Cube3dLut | null): void;
   attachScopes(hist: HTMLCanvasElement | null, wave: HTMLCanvasElement | null): void;
 }
 
@@ -94,9 +101,18 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
     ready,
     error,
     stats,
-    loadFile: useCallback(async (file: File) => {
+    loadFile: useCallback(async (file: Blob) => {
       const demuxer = await Mp4Demuxer.open(file);
+      const track = demuxer.videoTrack;
+      const durationS = track.durationUs / 1e6;
+      const info: LoadedClipInfo = {
+        width: track.width,
+        height: track.height,
+        fps: durationS > 0 ? Math.round((track.nbSamples / durationS) * 1000) / 1000 : 30,
+        durationUs: track.durationUs,
+      };
       await playerRef.current!.load(demuxer);
+      return info;
     }, []),
     play: useCallback(() => playerRef.current?.play(), []),
     pause: useCallback(() => playerRef.current?.pause(), []),
@@ -109,16 +125,16 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
       },
       [rerenderPaused],
     ),
-    loadCreativeLut: useCallback(
-      async (file: File) => {
-        rendererRef.current?.setCreativeLut(parseCube(await file.text()));
+    applyCreativeLut: useCallback(
+      (cube: Cube3dLut | null) => {
+        rendererRef.current?.setCreativeLut(cube);
         rerenderPaused();
       },
       [rerenderPaused],
     ),
-    loadInputLut: useCallback(
-      async (file: File) => {
-        rendererRef.current?.setInputLut(parseCube(await file.text()));
+    applyInputLut: useCallback(
+      (cube: Cube3dLut | null) => {
+        rendererRef.current?.setInputLut(cube);
         rerenderPaused();
       },
       [rerenderPaused],

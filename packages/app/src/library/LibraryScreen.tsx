@@ -1,7 +1,9 @@
 /// <reference path="./fsAccess.d.ts" />
+import { isTauri, pickFolderNative } from "@osmo/platform";
 import { tokens } from "@osmo/ui";
 import { useCallback, useEffect, useState } from "react";
 import { IdbGradeStore } from "../editor/gradeStore";
+import { scanNativeFolder } from "./nativeScan";
 import type { LibraryClip } from "./scanFolder";
 import { scanDirectory, scanFileList } from "./scanFolder";
 import { thumbnailFor } from "./thumbs";
@@ -17,7 +19,7 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
   const [folderName, setFolderName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [gradedKeys, setGradedKeys] = useState<Set<string>>(new Set());
-  const supportsFsAccess = typeof window.showDirectoryPicker === "function";
+  const supportsPicker = isTauri() || typeof window.showDirectoryPicker === "function";
 
   useEffect(() => {
     void gradeStore.listKeys().then((keys) => setGradedKeys(new Set(keys)));
@@ -26,6 +28,14 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
   const pickFolder = useCallback(async () => {
     try {
       setBusy(true);
+      if (isTauri()) {
+        const root = await pickFolderNative();
+        if (root) {
+          setFolderName(root.split("/").pop() ?? root);
+          setClips(await scanNativeFolder(root));
+        }
+        return;
+      }
       const handle = await window.showDirectoryPicker!({ id: "osmo-library", mode: "read" });
       setFolderName((handle as unknown as { name?: string }).name ?? "已选文件夹");
       setClips(await scanDirectory(handle));
@@ -72,7 +82,7 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
           {clips.length > 0 ? ` · ${clips.length} 个视频` : ""}
         </span>
         <div style={{ flex: 1 }} />
-        {supportsFsAccess ? (
+        {supportsPicker ? (
           <button onClick={pickFolder} style={primaryBtn} disabled={busy}>
             {busy ? "扫描中…" : "关联本地文件夹"}
           </button>

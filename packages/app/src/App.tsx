@@ -5,9 +5,10 @@ import { LibraryScreen } from "./library/LibraryScreen";
 import { autoProbeAndReport } from "./spike/autoProbe";
 
 interface ActiveClip {
-  file: File;
+  file: Blob;
   key: string;
   name: string;
+  srcPath: string | null;
 }
 
 /** Application shell shared by apps/desktop and apps/web. */
@@ -23,7 +24,7 @@ export function App() {
 
   const openClip = useCallback(async (clip: LibraryClip) => {
     const file = await clip.getFile();
-    setActiveClip({ file, key: clip.key, name: clip.name });
+    setActiveClip({ file, key: clip.key, name: clip.name, srcPath: clip.srcPath });
     setView("editor");
   }, []);
 
