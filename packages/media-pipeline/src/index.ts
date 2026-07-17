@@ -3,3 +3,4 @@ export * from "./decode/decodeSession";
 export * from "./decode/firstFrame";
 export * from "./player/clipPlayer";
 export * from "./player/scrubPreview";
+export * from "./mse/mseStream";

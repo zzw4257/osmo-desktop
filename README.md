@@ -59,7 +59,8 @@ pnpm exec tsx tooling/scripts/gen-export-job.ts <src.mp4> <out.mp4> 3840 2160 30
 3. D-Log 素材一键还原（色彩还原选 D-Log）目视对齐官方效果
 4. 导出 10-bit → ffprobe 应为 hevc/Main 10/yuv420p10le，QuickTime 色彩正常
 5. 已导出素材多选删除 → 相机上确认已清理（含 .LRF）
-6. 相机切「网络摄像头」→ 监看模式选中设备 → 实时画面 + 波形
+6. 相机切「网络摄像头」→ 监看模式（USB 摄像头源）→ 实时画面 + 波形
+7. 无线监看：监看模式切「无线 RTMP」→ 开始 → 手机 Mimo 直播填推流地址 → 画面经调色管线显示
 
 ## 已知边界
 
@@ -68,7 +69,6 @@ pnpm exec tsx tooling/scripts/gen-export-job.ts <src.mp4> <out.mp4> 3840 2160 30
   `DeviceProtocol` 插槽，属远期实验项
 - 网页端 Safari/Firefox 无 File System Access API，降级只读导入；HEVC 10-bit 网页硬编覆盖率低，
   网页导出自动降档并明示
-- copy 导入（拷贝进托管素材库 + 断点续传）尚未实现——link 模式 + 设备直读已覆盖主工作流
 
 ## 目录
 

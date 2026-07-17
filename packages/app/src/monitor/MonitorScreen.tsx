@@ -1,5 +1,7 @@
 import type { Grade } from "@osmo/color-engine";
 import { GpuContext, GradeRenderer, defaultGrade, parseCube } from "@osmo/color-engine";
+import { attachMseStream } from "@osmo/media-pipeline";
+import { isTauri, rtmpStartNative, rtmpStopNative } from "@osmo/platform";
 import { ScopesRenderer } from "@osmo/scopes";
 import { tokens } from "@osmo/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -28,6 +30,8 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [grade, setGrade] = useState<Grade>(() => defaultGrade());
+  const [source, setSource] = useState<"uvc" | "rtmp">("uvc");
+  const [rtmpUrl, setRtmpUrl] = useState<string | null>(null);
 
   const rendererRef = useRef<GradeRenderer | null>(null);
   const scopesRef = useRef<ScopesRenderer | null>(null);
@@ -83,6 +87,72 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
     },
     [gradeKey],
   );
+
+  /** 无线（RTMP）源: Rust relay → localhost fMP4 → MSE → 同一渲染循环 */
+  const startRtmp = useCallback(async () => {
+    stopRef.current?.();
+    setError(null);
+    setRtmpUrl(null);
+    try {
+      const restored = (await gradeStore.load("monitor:rtmp")) ?? defaultGrade();
+      setGrade(restored);
+      rendererRef.current?.setGrade(restored);
+
+      const info = await rtmpStartNative();
+      setRtmpUrl(info.rtmpUrl);
+
+      let cancelled = false;
+      const video = document.createElement("video");
+      video.muted = true;
+      let cleanupMse: (() => void) | null = null;
+      let raf = 0;
+
+      // The relay only produces bytes once the camera pushes — attach lazily
+      // so we show the guide immediately and start rendering when data flows.
+      void (async () => {
+        try {
+          const res = await fetch(info.httpUrl);
+          if (cancelled) return;
+          cleanupMse = await attachMseStream(video, res);
+          await video.play().catch(() => {});
+          const tick = () => {
+            if (cancelled) return;
+            if (video.readyState >= 2 && !video.paused) {
+              try {
+                const frame = new VideoFrame(video);
+                const renderer = rendererRef.current;
+                const ctx = canvasCtxRef.current;
+                if (renderer && ctx) {
+                  renderer.render(frame, ctx);
+                  const inter = renderer.intermediateTexture;
+                  if (inter) scopesRef.current?.update(inter);
+                }
+                frame.close();
+              } catch {
+                // frame not ready this tick
+              }
+            }
+            raf = requestAnimationFrame(tick);
+          };
+          tick();
+        } catch (e) {
+          if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        }
+      })();
+
+      stopRef.current = () => {
+        cancelled = true;
+        cancelAnimationFrame(raf);
+        cleanupMse?.();
+        void rtmpStopNative().catch(() => {});
+        setRtmpUrl(null);
+        setRunning(false);
+      };
+      setRunning(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
 
   const start = useCallback(async () => {
     stopRef.current?.();
@@ -206,9 +276,35 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
             相机切到「网络摄像头」模式后选择设备
           </span>
           <div style={{ flex: 1 }} />
+          {isTauri() && (
+            <div style={{ display: "flex", gap: 2, background: tokens.color.surfaceRaised, borderRadius: 8, padding: 2 }}>
+              {(["uvc", "rtmp"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => {
+                    stopRef.current?.();
+                    setSource(s);
+                  }}
+                  style={{
+                    border: "none",
+                    borderRadius: 6,
+                    padding: "5px 12px",
+                    fontSize: 12,
+                    cursor: "pointer",
+                    background: source === s ? tokens.color.accent : "transparent",
+                    color: source === s ? "#141414" : tokens.color.textDim,
+                    fontWeight: 600,
+                  }}
+                >
+                  {s === "uvc" ? "USB 摄像头" : "无线 RTMP"}
+                </button>
+              ))}
+            </div>
+          )}
           <select
             value={deviceId}
             onChange={(e) => setDeviceId(e.target.value)}
+            disabled={source === "rtmp"}
             style={{
               background: tokens.color.surfaceRaised,
               color: tokens.color.text,
@@ -227,7 +323,7 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
             ))}
           </select>
           <button
-            onClick={() => (running ? stopRef.current?.() : void start())}
+            onClick={() => (running ? stopRef.current?.() : void (source === "rtmp" ? startRtmp() : start()))}
             style={{
               ...btn,
               width: "auto",
@@ -245,12 +341,41 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
           style={{
             flex: 1,
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
             padding: 16,
             minHeight: 0,
+            gap: 12,
           }}
         >
+          {rtmpUrl && (
+            <div
+              style={{
+                background: "rgba(255,106,0,0.08)",
+                border: `1px solid ${tokens.color.border}`,
+                borderRadius: tokens.radius.md,
+                padding: "10px 16px",
+                fontSize: 13,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <span>
+                手机 Mimo → 直播 → 自定义 RTMP，推流地址填：
+                <code style={{ color: tokens.color.accent, marginLeft: 6, fontFamily: tokens.font.mono }}>
+                  {rtmpUrl}
+                </code>
+              </span>
+              <button
+                onClick={() => void navigator.clipboard?.writeText(rtmpUrl)}
+                style={{ ...btn, width: "auto", padding: "0 10px", fontSize: 12 }}
+              >
+                复制
+              </button>
+            </div>
+          )}
           <canvas
             ref={canvasRef}
             width={1920}

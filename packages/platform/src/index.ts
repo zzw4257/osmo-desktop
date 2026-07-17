@@ -144,3 +144,20 @@ export async function importCopyNative(
   channel.onmessage = onEvent;
   await invoke("import_copy", { files, destDir, onEvent: channel });
 }
+
+// ---- RTMP wireless preview relay (desktop) ----
+
+export interface RtmpInfo {
+  rtmpUrl: string;
+  httpUrl: string;
+}
+
+export async function rtmpStartNative(): Promise<RtmpInfo> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<RtmpInfo>("rtmp_start");
+}
+
+export async function rtmpStopNative(): Promise<void> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("rtmp_stop");
+}

@@ -1,6 +1,7 @@
 pub mod device;
 pub mod export;
 pub mod import;
+pub mod rtmp;
 pub mod scan;
 
 use export::{ExportArgs, ExportEvent};
@@ -47,6 +48,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(ExportJobs::default())
+        .manage(rtmp::RtmpState::default())
         .invoke_handler(tauri::generate_handler![
             export_begin,
             export_cancel,
@@ -54,7 +56,9 @@ pub fn run() {
             device::list_dji_volumes,
             device::delete_media_files,
             import::default_library_dir,
-            import::import_copy
+            import::import_copy,
+            rtmp::rtmp_start,
+            rtmp::rtmp_stop
         ])
         .setup(|app| {
             device::spawn_volume_watcher(app.handle().clone());
