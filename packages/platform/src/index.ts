@@ -86,3 +86,39 @@ export async function exportCancelNative(jobId: number): Promise<void> {
   const { invoke } = await import("@tauri-apps/api/core");
   await invoke("export_cancel", { jobId });
 }
+
+// ---- DJI device detection & guarded deletion (desktop) ----
+
+export interface DjiVolume {
+  path: string;
+  name: string;
+}
+
+export async function listDjiVolumes(): Promise<DjiVolume[]> {
+  if (!isTauri()) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<DjiVolume[]>("list_dji_volumes");
+}
+
+/** Subscribe to device plug/unplug. Returns an unsubscribe function. */
+export async function onDjiVolumesChanged(
+  cb: (volumes: DjiVolume[]) => void,
+): Promise<() => void> {
+  if (!isTauri()) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen<DjiVolume[]>("dji-volumes-changed", (e) => cb(e.payload));
+}
+
+export interface DeleteResult {
+  path: string;
+  ok: boolean;
+  error: string | null;
+}
+
+/** Guarded delete (DCIM-only, size re-verified in Rust; LRF removed too). */
+export async function deleteMediaFilesNative(
+  files: Array<{ path: string; expectedSize: number }>,
+): Promise<DeleteResult[]> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<DeleteResult[]>("delete_media_files", { files });
+}

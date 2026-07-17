@@ -1,3 +1,4 @@
+pub mod device;
 pub mod export;
 pub mod scan;
 
@@ -45,7 +46,17 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(ExportJobs::default())
-        .invoke_handler(tauri::generate_handler![export_begin, export_cancel, scan::scan_media_dir])
+        .invoke_handler(tauri::generate_handler![
+            export_begin,
+            export_cancel,
+            scan::scan_media_dir,
+            device::list_dji_volumes,
+            device::delete_media_files
+        ])
+        .setup(|app| {
+            device::spawn_volume_watcher(app.handle().clone());
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

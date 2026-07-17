@@ -1,5 +1,12 @@
 /// <reference path="./fsAccess.d.ts" />
-import { isTauri, pickFolderNative } from "@osmo/platform";
+import type { DjiVolume } from "@osmo/platform";
+import {
+  deleteMediaFilesNative,
+  isTauri,
+  listDjiVolumes,
+  onDjiVolumesChanged,
+  pickFolderNative,
+} from "@osmo/platform";
 import { tokens } from "@osmo/ui";
 import { useCallback, useEffect, useState } from "react";
 import { IdbGradeStore } from "../editor/gradeStore";
@@ -19,11 +26,71 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
   const [folderName, setFolderName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [gradedKeys, setGradedKeys] = useState<Set<string>>(new Set());
+  const [volumes, setVolumes] = useState<DjiVolume[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleteReport, setDeleteReport] = useState<string | null>(null);
   const supportsPicker = isTauri() || typeof window.showDirectoryPicker === "function";
 
   useEffect(() => {
     void gradeStore.listKeys().then((keys) => setGradedKeys(new Set(keys)));
   }, [clips]);
+
+  // DJI device plug/unplug (desktop only)
+  useEffect(() => {
+    if (!isTauri()) return;
+    let unsub: (() => void) | null = null;
+    void listDjiVolumes().then(setVolumes);
+    void onDjiVolumesChanged(setVolumes).then((u) => (unsub = u));
+    return () => unsub?.();
+  }, []);
+
+  const browseVolume = useCallback(async (vol: DjiVolume) => {
+    setBusy(true);
+    setFolderName(`${vol.name}（DJI 设备）`);
+    setClips(await scanNativeFolder(vol.path));
+    setSelected(new Set());
+    setBusy(false);
+  }, []);
+
+  const toggleSelect = useCallback((key: string) => {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const deleteSelected = useCallback(async () => {
+    const targets = clips.filter((c) => selected.has(c.key) && c.srcPath);
+    if (targets.length === 0) return;
+    const totalMb = targets.reduce((s, c) => s + c.size, 0) / 1e6;
+    const ok = window.confirm(
+      `确认从设备删除 ${targets.length} 个视频（${totalMb.toFixed(0)}MB）？\n` +
+        `将同时删除配对的 .LRF 代理，此操作不可恢复。\n\n` +
+        targets.slice(0, 8).map((c) => `· ${c.name}`).join("\n") +
+        (targets.length > 8 ? `\n· …等 ${targets.length} 个` : ""),
+    );
+    if (!ok) return;
+    setBusy(true);
+    const results = await deleteMediaFilesNative(
+      targets.map((c) => ({ path: c.srcPath!, expectedSize: c.size })),
+    );
+    const failed = results.filter((r) => !r.ok);
+    const okCount = results.length - failed.length;
+    setDeleteReport(
+      failed.length === 0
+        ? `已删除 ${okCount} 个视频`
+        : `已删除 ${okCount} 个；${failed.length} 个被跳过：${failed
+            .map((f) => f.error)
+            .slice(0, 3)
+            .join("；")}`,
+    );
+    const okPaths = new Set(results.filter((r) => r.ok).map((r) => r.path));
+    setClips((cs) => cs.filter((c) => !c.srcPath || !okPaths.has(c.srcPath)));
+    setSelected(new Set());
+    setBusy(false);
+  }, [clips, selected]);
 
   const pickFolder = useCallback(async () => {
     try {
@@ -82,6 +149,15 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
           {clips.length > 0 ? ` · ${clips.length} 个视频` : ""}
         </span>
         <div style={{ flex: 1 }} />
+        {selected.size > 0 && (
+          <button
+            onClick={() => void deleteSelected()}
+            disabled={busy}
+            style={{ ...primaryBtn, background: tokens.color.bad, color: "#fff" }}
+          >
+            删除所选（{selected.size}）
+          </button>
+        )}
         {supportsPicker ? (
           <button onClick={pickFolder} style={primaryBtn} disabled={busy}>
             {busy ? "扫描中…" : "关联本地文件夹"}
@@ -100,6 +176,50 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
           </label>
         )}
       </header>
+
+      {volumes.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "10px 20px",
+            background: "rgba(255,106,0,0.08)",
+            borderBottom: `1px solid ${tokens.color.border}`,
+            fontSize: 13,
+          }}
+        >
+          <span>📷</span>
+          <span>
+            检测到 DJI 设备：<strong>{volumes.map((v) => v.name).join("、")}</strong>
+          </span>
+          {volumes.map((v) => (
+            <button key={v.path} onClick={() => void browseVolume(v)} style={smallBtn} disabled={busy}>
+              浏览 {v.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {deleteReport && (
+        <div
+          style={{
+            padding: "8px 20px",
+            fontSize: 12,
+            color: tokens.color.textDim,
+            borderBottom: `1px solid ${tokens.color.border}`,
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{deleteReport}</span>
+          <button
+            onClick={() => setDeleteReport(null)}
+            style={{ background: "none", border: "none", color: tokens.color.textDim, cursor: "pointer" }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {clips.length === 0 ? (
         <div
@@ -136,6 +256,9 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
               key={clip.key}
               clip={clip}
               graded={gradedKeys.has(clip.key)}
+              selected={selected.has(clip.key)}
+              selectable={clip.srcPath !== null && isTauri()}
+              onToggleSelect={() => toggleSelect(clip.key)}
               onOpen={() => onOpenClip(clip)}
             />
           ))}
@@ -145,7 +268,21 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
   );
 }
 
-function ClipCard({ clip, graded, onOpen }: { clip: LibraryClip; graded: boolean; onOpen: () => void }) {
+function ClipCard({
+  clip,
+  graded,
+  selected,
+  selectable,
+  onToggleSelect,
+  onOpen,
+}: {
+  clip: LibraryClip;
+  graded: boolean;
+  selected: boolean;
+  selectable: boolean;
+  onToggleSelect: () => void;
+  onOpen: () => void;
+}) {
   const [thumb, setThumb] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
@@ -189,6 +326,24 @@ function ClipCard({ clip, graded, onOpen }: { clip: LibraryClip; graded: boolean
           {clip.hasLrf && <Badge text="LRF" color="#5cb2ff" />}
           {graded && <Badge text="已调色" color={tokens.color.good} />}
         </div>
+        {selectable && (
+          <input
+            type="checkbox"
+            checked={selected}
+            onClick={(e) => e.stopPropagation()}
+            onChange={onToggleSelect}
+            title="选择以删除"
+            style={{
+              position: "absolute",
+              top: 6,
+              right: 6,
+              width: 16,
+              height: 16,
+              accentColor: tokens.color.bad,
+              cursor: "pointer",
+            }}
+          />
+        )}
       </div>
       <div style={{ padding: "8px 10px" }}>
         <div
@@ -228,6 +383,17 @@ function Badge({ text, color }: { text: string; color: string }) {
     </span>
   );
 }
+
+const smallBtn: React.CSSProperties = {
+  background: tokens.color.accent,
+  color: "#141414",
+  fontWeight: 600,
+  borderRadius: 6,
+  padding: "3px 10px",
+  cursor: "pointer",
+  fontSize: 12,
+  border: "none",
+};
 
 const primaryBtn: React.CSSProperties = {
   background: tokens.color.accent,
