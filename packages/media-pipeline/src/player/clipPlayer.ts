@@ -1,5 +1,5 @@
 import { VideoDecodeSession } from "../decode/decodeSession";
-import type { DemuxedChunk, Mp4Demuxer } from "../demux/mp4Demuxer";
+import type { StreamingDemuxer } from "../demux/streamingDemuxer";
 
 /** Where decoded frames go. The player never knows what a "grade" is. */
 export interface FrameSink {
@@ -19,22 +19,23 @@ export interface ClipPlayerStats {
 
 const MAX_DECODE_QUEUE = 6;
 const MAX_FRAME_QUEUE = 4;
+const MAX_INFLIGHT_READS = 2;
 
 /**
- * M1 clip player: all chunks resident in memory (streaming demux lands in
- * M2), keyframe-indexed seek, pause/step, rAF-paced presentation.
+ * Streaming clip player: samples are fetched on demand from the demuxer
+ * (blob.slice reads), so multi-GB files play without residing in memory.
+ * Keyframe-indexed seek, pause/step, rAF-paced presentation.
  */
 export class ClipPlayer {
   #sink: FrameSink;
   #onStats: (s: ClipPlayerStats) => void;
-  #chunks: DemuxedChunk[] = [];
-  #keyframeIndices: number[] = [];
-  #config: VideoDecoderConfig | null = null;
-  #durationUs = 0;
+  #demuxer: StreamingDemuxer | null = null;
+  #generation = 0;
 
   #session: VideoDecodeSession | null = null;
   #frameQueue: VideoFrame[] = [];
   #feedIndex = 0;
+  #inflight = 0;
   #raf = 0;
   #state: PlaybackState = "empty";
   #baseTimeMs = -1;
@@ -51,21 +52,11 @@ export class ClipPlayer {
     this.#onStats = onStats;
   }
 
-  async load(demuxer: Mp4Demuxer): Promise<void> {
+  async load(demuxer: StreamingDemuxer): Promise<void> {
     this.unload();
-    this.#config = demuxer.decoderConfig();
-    this.#durationUs = demuxer.videoTrack.durationUs;
-    const chunks: DemuxedChunk[] = [];
-    await demuxer.extractAll((c) => chunks.push(c));
-    chunks.sort((a, b) => a.chunk.timestamp - b.chunk.timestamp);
-    this.#chunks = chunks;
-    this.#keyframeIndices = [];
-    for (let i = 0; i < chunks.length; i++) {
-      if (chunks[i]!.chunk.type === "key") this.#keyframeIndices.push(i);
-    }
+    this.#demuxer = demuxer;
     this.#state = "paused";
-    // Show the first frame immediately.
-    this.seek(0);
+    this.seek(0); // show the first frame immediately
   }
 
   get state(): PlaybackState {
@@ -95,8 +86,9 @@ export class ClipPlayer {
   }
 
   seek(targetUs: number): void {
-    if (this.#config === null || this.#chunks.length === 0) return;
-    const clamped = Math.max(0, Math.min(targetUs, this.#durationUs));
+    const demuxer = this.#demuxer;
+    if (!demuxer) return;
+    const clamped = Math.max(0, Math.min(targetUs, demuxer.videoTrack.durationUs));
     this.#resumeAfterSeek = this.#state === "playing";
     this.#seekTargetUs = clamped;
     this.#restartFrom(clamped);
@@ -104,16 +96,11 @@ export class ClipPlayer {
   }
 
   #restartFrom(targetUs: number): void {
+    const demuxer = this.#demuxer!;
     this.#teardownSession();
-    // Nearest keyframe at or before target
-    let keyIdx = 0;
-    for (const i of this.#keyframeIndices) {
-      if (this.#chunks[i]!.chunk.timestamp <= targetUs) keyIdx = i;
-      else break;
-    }
-    this.#feedIndex = keyIdx;
+    this.#feedIndex = demuxer.keyframeIndexBefore(targetUs);
     this.#session = new VideoDecodeSession(
-      this.#config!,
+      demuxer.decoderConfig(),
       (frame) => this.#frameQueue.push(frame),
       () => this.#teardownSession(),
     );
@@ -129,28 +116,50 @@ export class ClipPlayer {
     if (active) this.#raf = requestAnimationFrame(this.#loop);
   };
 
+  /** Backpressured async feed: at most MAX_INFLIGHT_READS sample reads and
+   * MAX_DECODE_QUEUE undecoded chunks outstanding. */
   #pump(): void {
     const s = this.#session;
-    if (!s || s.state !== "configured") return;
+    const demuxer = this.#demuxer;
+    if (!s || !demuxer || s.state !== "configured") return;
+    const generation = this.#generation;
     while (
-      this.#feedIndex < this.#chunks.length &&
-      s.queueSize < MAX_DECODE_QUEUE &&
+      this.#feedIndex < demuxer.samples.length &&
+      this.#inflight < MAX_INFLIGHT_READS &&
+      s.queueSize + this.#inflight < MAX_DECODE_QUEUE &&
       this.#frameQueue.length < MAX_FRAME_QUEUE
     ) {
-      s.decode(this.#chunks[this.#feedIndex]!.chunk);
-      this.#feedIndex++;
+      const index = this.#feedIndex++;
+      this.#inflight++;
+      demuxer
+        .chunkAt(index)
+        .then((chunk) => {
+          if (generation !== this.#generation) return; // seek/unload raced
+          this.#inflight--;
+          if (this.#session?.state === "configured") {
+            this.#session.decode(chunk);
+            if (index === demuxer.samples.length - 1) void this.#session.flush();
+          }
+          // Keep the pipeline full even between rAF ticks
+          this.#pump();
+        })
+        .catch(() => {
+          if (generation === this.#generation) this.#inflight--;
+        });
     }
-    if (this.#feedIndex >= this.#chunks.length) void s.flush();
   }
 
   #present(): void {
+    const demuxer = this.#demuxer;
+    if (!demuxer) return;
+
     // Seek: discard until target frame, render it, pause there.
     if (this.#seekTargetUs !== null) {
       while (this.#frameQueue.length > 0) {
         const f = this.#frameQueue.shift()!;
         const isTarget =
           f.timestamp + (f.duration ?? 0) >= this.#seekTargetUs ||
-          this.#feedIndex >= this.#chunks.length;
+          this.#feedIndex >= demuxer.samples.length;
         if (isTarget) {
           this.#positionUs = f.timestamp;
           this.#sink.render(f);
@@ -178,7 +187,11 @@ export class ClipPlayer {
 
     if (this.#state !== "playing") return;
     if (this.#frameQueue.length === 0) {
-      if (this.#feedIndex >= this.#chunks.length && (this.#session?.queueSize ?? 0) === 0) {
+      if (
+        this.#feedIndex >= demuxer.samples.length &&
+        this.#inflight === 0 &&
+        (this.#session?.queueSize ?? 0) === 0
+      ) {
         this.#state = "ended";
         this.#teardownSession();
       }
@@ -214,7 +227,7 @@ export class ClipPlayer {
     this.#onStats({
       state: this.#state,
       positionUs: this.#positionUs,
-      durationUs: this.#durationUs,
+      durationUs: this.#demuxer?.videoTrack.durationUs ?? 0,
       presentedFps: this.#fpsWindow.length,
       dropped: this.#dropped,
       decodeQueue: this.#session?.queueSize ?? 0,
@@ -222,6 +235,8 @@ export class ClipPlayer {
   }
 
   #teardownSession(): void {
+    this.#generation++;
+    this.#inflight = 0;
     this.#session?.close();
     this.#session = null;
     for (const f of this.#frameQueue) f.close();
@@ -231,9 +246,7 @@ export class ClipPlayer {
   unload(): void {
     cancelAnimationFrame(this.#raf);
     this.#teardownSession();
-    this.#chunks = [];
-    this.#keyframeIndices = [];
-    this.#config = null;
+    this.#demuxer = null;
     this.#state = "empty";
     this.#positionUs = 0;
     this.#dropped = 0;

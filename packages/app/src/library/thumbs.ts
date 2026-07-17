@@ -1,14 +1,11 @@
-import { Mp4Demuxer, VideoDecodeSession } from "@osmo/media-pipeline";
+import { StreamingDemuxer, VideoDecodeSession, decodeFirstFrame } from "@osmo/media-pipeline";
 import type { LibraryClip } from "./scanFolder";
-
-/** Skip thumbnailing sources we'd have to slurp fully into memory (the M1
- * demuxer is whole-file; streaming lands in M2). LRF proxies are ~1MB/s so
- * they always pass. */
-const MAX_THUMB_SOURCE_BYTES = 256 * 1024 * 1024;
 
 const cache = new Map<string, Promise<string | null>>();
 
-/** First-frame JPEG data URL, decoded from the LRF proxy when available. */
+/** First-frame JPEG data URL, decoded from the LRF proxy when available.
+ * The streaming demuxer reads only moov + the first samples, so even
+ * proxy-less multi-GB clips thumbnail cheaply. */
 export function thumbnailFor(clip: LibraryClip, width = 320): Promise<string | null> {
   let p = cache.get(clip.key);
   if (!p) {
@@ -21,33 +18,10 @@ export function thumbnailFor(clip: LibraryClip, width = 320): Promise<string | n
 async function generate(clip: LibraryClip, width: number): Promise<string | null> {
   const lrf = await clip.getLrf();
   const source = lrf ?? (await clip.getFile());
-  if (source.size > MAX_THUMB_SOURCE_BYTES) return null;
 
-  const demuxer = await Mp4Demuxer.open(source);
-  const config = demuxer.decoderConfig();
-  if (!(await VideoDecodeSession.isSupported(config))) return null;
-
-  const frame = await new Promise<VideoFrame>((resolve, reject) => {
-    let done = false;
-    const session = new VideoDecodeSession(
-      config,
-      (f) => {
-        if (!done) {
-          done = true;
-          resolve(f);
-        } else {
-          f.close();
-        }
-      },
-      reject,
-    );
-    demuxer
-      .extractAll((c) => {
-        if (session.state === "configured") session.decode(c.chunk);
-      })
-      .then(() => session.flush())
-      .catch(reject);
-  });
+  const demuxer = await StreamingDemuxer.open(source);
+  if (!(await VideoDecodeSession.isSupported(demuxer.decoderConfig()))) return null;
+  const frame = await decodeFirstFrame(demuxer);
 
   try {
     const scale = width / frame.displayWidth;

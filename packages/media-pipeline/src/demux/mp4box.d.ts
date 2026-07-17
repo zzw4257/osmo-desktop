@@ -27,6 +27,9 @@ declare module "mp4box" {
     cts: number;
     dts: number;
     duration: number;
+    /** Absolute byte offset in the file (from the sample table). */
+    offset: number;
+    size: number;
     data: Uint8Array;
   }
 
@@ -43,6 +46,8 @@ declare module "mp4box" {
 
   export interface MP4Trak {
     mdia: { minf: { stbl: { stsd: { entries: MP4SampleEntry[] } } } };
+    /** Sample table built when moov is parsed (metadata only, no payload). */
+    samples?: MP4Sample[];
   }
 
   export interface MP4File {

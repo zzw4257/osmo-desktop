@@ -1,3 +1,4 @@
-export * from "./demux/mp4Demuxer";
+export * from "./demux/streamingDemuxer";
 export * from "./decode/decodeSession";
+export * from "./decode/firstFrame";
 export * from "./player/clipPlayer";

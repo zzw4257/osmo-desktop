@@ -21,4 +21,8 @@ ffmpeg -y -f lavfi -i "nullsrc=size=3840x2160:rate=30:duration=2" \
   -tag:v hvc1 -movflags +faststart \
   "$OUT_DIR/ramp_4k_hevc10.mp4"
 
+# 3) moov-at-end remux of the ramp — DJI in-camera files put moov after
+#    mdat; the streaming demuxer test covers this layout.
+ffmpeg -y -i "$OUT_DIR/ramp_4k_hevc10.mp4" -c copy "$OUT_DIR/ramp_moov_at_end.mp4"
+
 echo "Samples written to $OUT_DIR"

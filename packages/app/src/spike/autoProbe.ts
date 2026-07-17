@@ -1,34 +1,12 @@
 import { GpuContext, runPrecisionProbe } from "@osmo/color-engine";
 import type { PrecisionReport } from "@osmo/color-engine";
-import { Mp4Demuxer, VideoDecodeSession } from "@osmo/media-pipeline";
+import { StreamingDemuxer, decodeFirstFrame } from "@osmo/media-pipeline";
 
 /** Decode the first frame of `file` and run the 10-bit integrity probe. */
 export async function probeFile(file: Blob): Promise<PrecisionReport> {
   const gpu = await GpuContext.create();
-  const demuxer = await Mp4Demuxer.open(file);
-  const config = demuxer.decoderConfig();
-  const frame = await new Promise<VideoFrame>((resolve, reject) => {
-    let first = false;
-    const session = new VideoDecodeSession(
-      config,
-      (f) => {
-        // Keep only the first frame; close the rest or they leak.
-        if (!first) {
-          first = true;
-          resolve(f);
-        } else {
-          f.close();
-        }
-      },
-      reject,
-    );
-    demuxer
-      .extractAll((c) => {
-        if (session.state === "configured") session.decode(c.chunk);
-      })
-      .then(() => session.flush())
-      .catch(reject);
-  });
+  const demuxer = await StreamingDemuxer.open(file);
+  const frame = await decodeFirstFrame(demuxer);
   try {
     return await runPrecisionProbe(gpu, frame);
   } finally {

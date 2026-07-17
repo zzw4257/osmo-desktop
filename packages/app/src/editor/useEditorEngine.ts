@@ -1,7 +1,7 @@
 import type { Cube3dLut, Grade } from "@osmo/color-engine";
 import { GpuContext, GradeRenderer } from "@osmo/color-engine";
 import type { ClipPlayerStats } from "@osmo/media-pipeline";
-import { ClipPlayer, Mp4Demuxer } from "@osmo/media-pipeline";
+import { ClipPlayer, StreamingDemuxer } from "@osmo/media-pipeline";
 import { ScopesRenderer } from "@osmo/scopes";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -106,7 +106,7 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
     error,
     stats,
     loadFile: useCallback(async (file: Blob) => {
-      const demuxer = await Mp4Demuxer.open(file);
+      const demuxer = await StreamingDemuxer.open(file);
       const track = demuxer.videoTrack;
       const durationS = track.durationUs / 1e6;
       const info: LoadedClipInfo = {
