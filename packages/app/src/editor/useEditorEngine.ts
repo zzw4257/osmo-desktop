@@ -93,7 +93,6 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
       lastFrameRef.current?.close();
       lastFrameRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const rerenderPaused = useCallback(() => {

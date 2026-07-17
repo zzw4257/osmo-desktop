@@ -12,6 +12,9 @@ export default tseslint.config(
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/consistent-type-imports": "error",
+      // Ambient .d.ts files (mp4box, FSA) must reach consumers that compile
+      // our source directly — path references are the deliberate mechanism.
+      "@typescript-eslint/triple-slash-reference": ["error", { path: "always" }],
     },
   },
 );

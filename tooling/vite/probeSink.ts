@@ -18,7 +18,6 @@ export function probeSink(): Plugin {
         let body = "";
         req.on("data", (c: Buffer) => (body += c.toString()));
         req.on("end", () => {
-          // eslint-disable-next-line no-console
           console.log(`\n[PROBE-RESULT] ${body}\n`);
           res.statusCode = 204;
           res.end();
