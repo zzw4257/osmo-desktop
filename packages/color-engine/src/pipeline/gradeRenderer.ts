@@ -4,6 +4,7 @@ import { defaultGrade } from "../grade/schema";
 import type { Cube3dLut } from "../lut/cubeParser";
 import { cubeToRgba, identityCube } from "../lut/cubeParser";
 import { floatsToHalves } from "../lut/halfFloat";
+import { DETAIL_WGSL } from "./detailShader";
 import { GRADE_WGSL, PRESENT_WGSL } from "./gradeShader";
 import type { GpuContext } from "./gpuContext";
 import { PARAMS_BYTE_SIZE, packParams } from "./uniforms";
@@ -31,6 +32,12 @@ export class GradeRenderer {
   #inputLutTex: GPUTexture;
   #creativeLutTex: GPUTexture;
   #intermediate: GPUTexture | null = null;
+  #detailTex: GPUTexture | null = null;
+  #detailPipeline: GPURenderPipeline;
+  #detailParamsBuf: GPUBuffer;
+  #detailActive = false;
+  #detailValues: [number, number, number] = [0, 0, 0];
+  #frameCounter = 0;
   #group0: GPUBindGroup;
   #group2: GPUBindGroup;
   #curvesKey = "";
@@ -55,6 +62,18 @@ export class GradeRenderer {
       vertex: { module: gradeModule, entryPoint: "vs" },
       fragment: { module: gradeModule, entryPoint: "fs", targets: [{ format: "rgba16float" }] },
       primitive: { topology: "triangle-list" },
+    });
+
+    const detailModule = device.createShaderModule({ code: DETAIL_WGSL });
+    this.#detailPipeline = device.createRenderPipeline({
+      layout: "auto",
+      vertex: { module: detailModule, entryPoint: "vs" },
+      fragment: { module: detailModule, entryPoint: "fs", targets: [{ format: "rgba16float" }] },
+      primitive: { topology: "triangle-list" },
+    });
+    this.#detailParamsBuf = device.createBuffer({
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     const presentModule = device.createShaderModule({ code: PRESENT_WGSL });
@@ -138,6 +157,10 @@ export class GradeRenderer {
     packParams(grade, this.#paramsData);
     this.#gpu.device.queue.writeBuffer(this.#paramsBuf, 0, this.#paramsData);
 
+    const d = grade.ops.detail;
+    this.#detailValues = [d.sharpen, d.denoise, d.grain];
+    this.#detailActive = d.sharpen !== 0 || d.denoise !== 0 || d.grain !== 0;
+
     const key = JSON.stringify(grade.ops.curves);
     if (key !== this.#curvesKey) {
       this.#curvesKey = key;
@@ -171,12 +194,26 @@ export class GradeRenderer {
     return this.#intermediate;
   }
 
-  /** The graded intermediate of the most recent frame (scopes input). */
+  /** The final pre-display texture of the most recent frame (scopes input) —
+   * post-detail when the detail pass ran, the grade output otherwise. */
   get intermediateTexture(): GPUTexture | null {
-    return this.#intermediate;
+    return this.#detailActive && this.#detailTex ? this.#detailTex : this.#intermediate;
   }
 
-  /** Render one video frame through the grade into the canvas. */
+  #ensureDetailTex(width: number, height: number): GPUTexture {
+    if (this.#detailTex && this.#detailTex.width === width && this.#detailTex.height === height) {
+      return this.#detailTex;
+    }
+    this.#detailTex?.destroy();
+    this.#detailTex = this.#gpu.device.createTexture({
+      size: { width, height },
+      format: "rgba16float",
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    return this.#detailTex;
+  }
+
+  /** Render one video frame through grade (+detail) into the canvas. */
   render(frame: VideoFrame, canvasCtx: GPUCanvasContext): void {
     const device = this.#gpu.device;
     const target = canvasCtx.getCurrentTexture();
@@ -210,10 +247,45 @@ export class GradeRenderer {
     gradePass.draw(3);
     gradePass.end();
 
+    // P2: spatial detail (sharpen/denoise/grain), skipped while neutral
+    let presentSrc = inter;
+    if (this.#detailActive) {
+      const detailTex = this.#ensureDetailTex(target.width, target.height);
+      this.#frameCounter++;
+      device.queue.writeBuffer(
+        this.#detailParamsBuf,
+        0,
+        new Float32Array([...this.#detailValues, this.#frameCounter % 1024]),
+      );
+      const detailGroup = device.createBindGroup({
+        layout: this.#detailPipeline.getBindGroupLayout(0),
+        entries: [
+          { binding: 0, resource: inter.createView() },
+          { binding: 1, resource: this.#presentSampler },
+          { binding: 2, resource: { buffer: this.#detailParamsBuf } },
+        ],
+      });
+      const detailPass = encoder.beginRenderPass({
+        colorAttachments: [
+          {
+            view: detailTex.createView(),
+            loadOp: "clear",
+            storeOp: "store",
+            clearValue: { r: 0, g: 0, b: 0, a: 1 },
+          },
+        ],
+      });
+      detailPass.setPipeline(this.#detailPipeline);
+      detailPass.setBindGroup(0, detailGroup);
+      detailPass.draw(3);
+      detailPass.end();
+      presentSrc = detailTex;
+    }
+
     const presentGroup = device.createBindGroup({
       layout: this.#presentPipeline.getBindGroupLayout(0),
       entries: [
-        { binding: 0, resource: inter.createView() },
+        { binding: 0, resource: presentSrc.createView() },
         { binding: 1, resource: this.#presentSampler },
       ],
     });

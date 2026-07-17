@@ -224,6 +224,15 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
         )}
       </Section>
 
+      <Section title="细节" onReset={() => patch({ detail: d.detail })}>
+        <Slider label="锐化" value={ops.detail.sharpen} min={0} max={100}
+          onChange={(v) => patch({ detail: { ...ops.detail, sharpen: v } })} />
+        <Slider label="降噪" value={ops.detail.denoise} min={0} max={100}
+          onChange={(v) => patch({ detail: { ...ops.detail, denoise: v } })} />
+        <Slider label="颗粒" value={ops.detail.grain} min={0} max={100}
+          onChange={(v) => patch({ detail: { ...ops.detail, grain: v } })} />
+      </Section>
+
       <Section title="效果" onReset={() => patch({ splitTone: d.splitTone, fade: 0, vignette: d.vignette })}>
         <Slider label="褪色" value={ops.fade} min={0} max={100} onChange={(v) => patch({ fade: v })} />
         <Slider label="阴影色相" value={ops.splitTone.shadowHue} min={0} max={360}

@@ -8,6 +8,7 @@ export * from "./pipeline/blitRenderer";
 export * from "./pipeline/precisionProbe";
 export * from "./pipeline/gradeCore";
 export * from "./pipeline/gradeShader";
+export * from "./pipeline/detailShader";
 export * from "./pipeline/exportShader";
 export * from "./pipeline/exportPayload";
 export * from "./pipeline/uniforms";
