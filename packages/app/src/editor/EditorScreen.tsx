@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { markClipExported } from "../library/libraryStore";
 import { AdjustPanel } from "./AdjustPanel";
 import { IdbGradeStore, clipKeyForFile } from "./gradeStore";
+import { saveBlobAs, webExport } from "./webExport";
 import type { LoadedClipInfo } from "./useEditorEngine";
 import { useEditorEngine } from "./useEditorEngine";
 
@@ -26,6 +27,8 @@ interface ExportState {
   status: "running" | "done" | "error";
   message?: string;
   outPath: string;
+  /** e.g. "HEVC 10-bit（原生）" / "H.264 8-bit（网页）" — fidelity honesty. */
+  note?: string;
 }
 
 export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
@@ -45,6 +48,8 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
   const [exportState, setExportState] = useState<ExportState | null>(null);
   /** Non-null while the user drags the seek bar (proxy scrub in flight). */
   const [dragUs, setDragUs] = useState<number | null>(null);
+  const fileRef = useRef<Blob | null>(null);
+  const webCancelRef = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const historyRef = useRef<Grade[]>([]);
   const futureRef = useRef<Grade[]>([]);
@@ -117,6 +122,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
       setFileName(name);
       setClipKey(key);
       setSrcPath(src);
+      fileRef.current = file;
       const restored = (await gradeStore.load(key)) ?? defaultGrade();
       historyRef.current = await gradeStore.loadHistory(key);
       futureRef.current = [];
@@ -171,7 +177,51 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
     [engine],
   );
 
-  const canExport = isTauri() && srcPath !== null && clipInfo !== null && fileName !== null;
+  const canNativeExport = isTauri() && srcPath !== null && clipInfo !== null && fileName !== null;
+  const canWebExport = !isTauri() && clipInfo !== null && fileName !== null;
+  const canExport = canNativeExport || canWebExport;
+
+  const onWebExport = useCallback(async () => {
+    const file = fileRef.current;
+    if (!file || !clipInfo || !fileName) return;
+    webCancelRef.current = false;
+    const outName = fileName.replace(/\.\w+$/, "") + "_graded.mp4";
+    setExportState({
+      jobId: null,
+      frame: 0,
+      totalFrames: Math.max(1, Math.round((clipInfo.durationUs / 1e6) * clipInfo.fps)),
+      status: "running",
+      outPath: outName,
+      note: "网页端导出 · 10-bit 保真请用桌面版",
+    });
+    try {
+      const result = await webExport(
+        file,
+        grade,
+        inputCube,
+        creativeCube,
+        (p) => setExportState((s) => (s ? { ...s, frame: p.frame, totalFrames: p.totalFrames } : s)),
+        () => webCancelRef.current,
+      );
+      await saveBlobAs(result.blob, outName);
+      setExportState((s) =>
+        s
+          ? {
+              ...s,
+              frame: result.frames,
+              totalFrames: result.frames,
+              status: "done",
+              note: `${result.codecLabel}（网页编码）`,
+            }
+          : s,
+      );
+      if (clipKey) void markClipExported(clipKey, outName);
+    } catch (e) {
+      setExportState((s) =>
+        s ? { ...s, status: "error", message: e instanceof Error ? e.message : String(e) } : s,
+      );
+    }
+  }, [clipInfo, fileName, grade, inputCube, creativeCube, clipKey]);
 
   const onExport = useCallback(async () => {
     if (!srcPath || !clipInfo || !fileName) return;
@@ -273,7 +323,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
           <div style={{ flex: 1 }} />
           {canExport && (
             <button
-              onClick={onExport}
+              onClick={() => void (canNativeExport ? onExport() : onWebExport())}
               disabled={exportState?.status === "running"}
               style={{
                 background: tokens.color.accent,
@@ -285,8 +335,13 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
                 fontSize: 13,
                 border: "none",
               }}
+              title={canNativeExport ? "原生管线 · 10-bit 保真" : "浏览器编码 · 8-bit"}
             >
-              {exportState?.status === "running" ? "导出中…" : "导出 10-bit"}
+              {exportState?.status === "running"
+                ? "导出中…"
+                : canNativeExport
+                  ? "导出 10-bit"
+                  : "导出"}
             </button>
           )}
           <label
@@ -491,8 +546,9 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
             </strong>
             <button
               onClick={() => {
-                if (exportState.status === "running" && exportState.jobId !== null) {
-                  void exportCancelNative(exportState.jobId);
+                if (exportState.status === "running") {
+                  if (exportState.jobId !== null) void exportCancelNative(exportState.jobId);
+                  webCancelRef.current = true;
                 }
                 setExportState(null);
               }}
@@ -535,6 +591,11 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
                 {exportState.frame}/{exportState.totalFrames} 帧 ·{" "}
                 <span style={{ wordBreak: "break-all" }}>{exportState.outPath}</span>
               </div>
+              {exportState.note && (
+                <div style={{ color: tokens.color.accent, marginTop: 4, fontSize: 11 }}>
+                  {exportState.note}
+                </div>
+              )}
             </>
           )}
         </div>

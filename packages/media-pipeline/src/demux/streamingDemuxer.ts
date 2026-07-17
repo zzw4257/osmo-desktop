@@ -23,6 +23,15 @@ export interface SampleRef {
   isSync: boolean;
 }
 
+export interface AudioTrackInfo {
+  id: number;
+  codec: string;
+  sampleRate: number;
+  channelCount: number;
+  /** AudioSpecificConfig (AAC) when extractable — remux needs it. */
+  description: Uint8Array | null;
+}
+
 const PARSE_CHUNK = 2 * 1024 * 1024;
 
 /**
@@ -36,11 +45,21 @@ export class StreamingDemuxer {
   #blob: Blob;
   readonly videoTrack: VideoTrackInfo;
   readonly samples: SampleRef[];
+  readonly audioTrack: AudioTrackInfo | null;
+  readonly audioSamples: SampleRef[];
 
-  private constructor(blob: Blob, track: VideoTrackInfo, samples: SampleRef[]) {
+  private constructor(
+    blob: Blob,
+    track: VideoTrackInfo,
+    samples: SampleRef[],
+    audioTrack: AudioTrackInfo | null,
+    audioSamples: SampleRef[],
+  ) {
     this.#blob = blob;
     this.videoTrack = track;
     this.samples = samples;
+    this.audioTrack = audioTrack;
+    this.audioSamples = audioSamples;
   }
 
   static async open(blob: Blob): Promise<StreamingDemuxer> {
@@ -88,8 +107,38 @@ export class StreamingDemuxer {
       nbSamples: v.nb_samples,
       description: extractDescription(file, v.id),
     };
+
+    // Audio (optional): index samples for lossless remux on export.
+    let audioTrack: AudioTrackInfo | null = null;
+    let audioSamples: SampleRef[] = [];
+    const a = (info as MP4Info).audioTracks?.[0];
+    if (a) {
+      const audioRaw = file.getTrackById(a.id).samples ?? [];
+      audioSamples = audioRaw.map((s) => ({
+        offset: s.offset,
+        size: s.size,
+        ctsUs: (1e6 * s.cts) / s.timescale,
+        durationUs: (1e6 * s.duration) / s.timescale,
+        isSync: s.is_sync,
+      }));
+      audioTrack = {
+        id: a.id,
+        codec: a.codec,
+        sampleRate: a.audio?.sample_rate ?? 48000,
+        channelCount: a.audio?.channel_count ?? 2,
+        description: extractAudioSpecificConfig(file, a.id),
+      };
+    }
+
     file.stop();
-    return new StreamingDemuxer(blob, track, samples);
+    return new StreamingDemuxer(blob, track, samples, audioTrack, audioSamples);
+  }
+
+  /** Read one audio sample's payload. */
+  async audioChunkAt(index: number): Promise<ArrayBuffer> {
+    const s = this.audioSamples[index];
+    if (!s) throw new Error(`音频样本越界: ${index}`);
+    return this.#blob.slice(s.offset, s.offset + s.size).arrayBuffer();
   }
 
   decoderConfig(): VideoDecoderConfig {
@@ -130,6 +179,25 @@ export class StreamingDemuxer {
 
 /** Serialize the hvcC/avcC/vpcC/av1C sample-entry box into the raw
  * `description` bytes WebCodecs expects (box payload without 8-byte header). */
+/** AAC AudioSpecificConfig from the esds descriptor chain (defensive —
+ * returns null on any unexpected shape and the export degrades to
+ * video-only). */
+function extractAudioSpecificConfig(file: MP4File, trackId: number): Uint8Array | null {
+  try {
+    const trak = file.getTrackById(trackId) as unknown as {
+      mdia: { minf: { stbl: { stsd: { entries: Array<Record<string, unknown>> } } } };
+    };
+    for (const entry of trak.mdia.minf.stbl.stsd.entries) {
+      const esds = entry.esds as { esd?: { descs?: Array<{ descs?: Array<{ data?: Uint8Array }> }> } } | undefined;
+      const data = esds?.esd?.descs?.[0]?.descs?.[0]?.data;
+      if (data instanceof Uint8Array && data.length > 0) return data;
+    }
+  } catch {
+    // fall through
+  }
+  return null;
+}
+
 function extractDescription(file: MP4File, trackId: number): Uint8Array | null {
   const trak = file.getTrackById(trackId);
   for (const entry of trak.mdia.minf.stbl.stsd.entries) {
