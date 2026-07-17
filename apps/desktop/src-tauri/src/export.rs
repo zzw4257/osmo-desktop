@@ -39,8 +39,23 @@ pub enum ExportEvent {
     Error { message: String },
 }
 
+/// Resolve ffmpeg. GUI apps launched from Finder don't inherit the shell
+/// PATH, so probe the common install locations before falling back to PATH
+/// lookup. A bundled static sidecar can replace this wholesale later.
 pub fn ffmpeg_path() -> String {
-    std::env::var("OSMO_FFMPEG").unwrap_or_else(|_| "ffmpeg".to_string())
+    if let Ok(p) = std::env::var("OSMO_FFMPEG") {
+        return p;
+    }
+    for candidate in [
+        "/opt/homebrew/bin/ffmpeg",
+        "/usr/local/bin/ffmpeg",
+        "/opt/local/bin/ffmpeg",
+    ] {
+        if std::path::Path::new(candidate).is_file() {
+            return candidate.to_string();
+        }
+    }
+    "ffmpeg".to_string()
 }
 
 /// Blocking export loop. `emit` receives progress/done/error events.
