@@ -29,6 +29,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const histRef = useRef<HTMLCanvasElement>(null);
   const waveRef = useRef<HTMLCanvasElement>(null);
+  const vecRef = useRef<HTMLCanvasElement>(null);
   const engine = useEditorEngine(canvasRef);
   const [grade, setGrade] = useState<Grade>(() => defaultGrade());
   const [clipKey, setClipKey] = useState<string | null>(null);
@@ -43,7 +44,11 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
 
   useEffect(() => {
     if (engine.ready) {
-      engine.attachScopes(showScopes ? histRef.current : null, showScopes ? waveRef.current : null);
+      engine.attachScopes(
+        showScopes ? histRef.current : null,
+        showScopes ? waveRef.current : null,
+        showScopes ? vecRef.current : null,
+      );
     }
   }, [engine, engine.ready, showScopes]);
 
@@ -277,6 +282,10 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
             <figure style={scopeFigure}>
               <canvas ref={waveRef} width={512} height={110} style={{ ...scopeCanvas, width: 320 }} />
               <figcaption style={scopeCaption}>波形 · 亮度</figcaption>
+            </figure>
+            <figure style={scopeFigure}>
+              <canvas ref={vecRef} width={256} height={256} style={{ ...scopeCanvas, width: 110, height: 110 }} />
+              <figcaption style={scopeCaption}>矢量 · CbCr</figcaption>
             </figure>
           </div>
         )}

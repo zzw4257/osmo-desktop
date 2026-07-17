@@ -1,18 +1,20 @@
 /**
- * Video scopes: RGB histogram + luma waveform, computed on-GPU from the
- * graded intermediate texture (post-grade, pre-display) and drawn straight
- * from storage buffers — pixel data never returns to the CPU.
+ * Video scopes: RGB histogram + luma waveform + CbCr vectorscope, computed
+ * on-GPU from the graded intermediate texture (post-grade, pre-display) and
+ * drawn straight from storage buffers — pixel data never returns to the CPU.
  */
 const WAVE_COLS = 512;
 const WAVE_ROWS = 256;
 const HIST_BINS = 256;
+const VEC_SIZE = 256;
 const SAMPLE_STRIDE = 2;
 
 const COMPUTE_WGSL = /* wgsl */ `
 @group(0) @binding(0) var src: texture_2d<f32>;
 @group(0) @binding(1) var<storage, read_write> hist: array<atomic<u32>, ${HIST_BINS * 3}>;
 @group(0) @binding(2) var<storage, read_write> wave: array<atomic<u32>, ${WAVE_COLS * WAVE_ROWS}>;
-@group(0) @binding(3) var<storage, read_write> maxima: array<atomic<u32>, 2>; // [histMax, waveMax]
+@group(0) @binding(3) var<storage, read_write> maxima: array<atomic<u32>, 3>; // [histMax, waveMax, vecMax]
+@group(0) @binding(4) var<storage, read_write> vecs: array<atomic<u32>, ${VEC_SIZE * VEC_SIZE}>;
 
 fn luma_of(c: vec3f) -> f32 {
   return dot(c, vec3f(0.2126, 0.7152, 0.0722));
@@ -38,6 +40,14 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let row = u32((1.0 - y) * ${WAVE_ROWS - 1}.0);
   let w = atomicAdd(&wave[row * ${WAVE_COLS}u + col], 1u) + 1u;
   atomicMax(&maxima[1], w);
+
+  // Vectorscope: BT.709 CbCr, centered; Cb → +x, Cr → +y(up)
+  let cb = clamp((c.b - y) / 1.8556 + 0.5, 0.0, 1.0);
+  let cr = clamp((c.r - y) / 1.5748 + 0.5, 0.0, 1.0);
+  let vx = min(u32(cb * ${VEC_SIZE - 1}.0), ${VEC_SIZE - 1}u);
+  let vy = min(u32((1.0 - cr) * ${VEC_SIZE - 1}.0), ${VEC_SIZE - 1}u);
+  let vv = atomicAdd(&vecs[vy * ${VEC_SIZE}u + vx], 1u) + 1u;
+  atomicMax(&maxima[2], vv);
 }
 `;
 
@@ -61,7 +71,8 @@ fn vs(@builtin(vertex_index) vi: u32) -> VSOut {
 
 @group(0) @binding(0) var<storage, read> hist: array<u32, ${HIST_BINS * 3}>;
 @group(0) @binding(1) var<storage, read> wave: array<u32, ${WAVE_COLS * WAVE_ROWS}>;
-@group(0) @binding(2) var<storage, read> maxima: array<u32, 2>;
+@group(0) @binding(2) var<storage, read> maxima: array<u32, 3>;
+@group(0) @binding(3) var<storage, read> vecs: array<u32, ${VEC_SIZE * VEC_SIZE}>;
 
 @fragment
 fn fs_hist(in: VSOut) -> @location(0) vec4f {
@@ -93,6 +104,24 @@ fn fs_wave(in: VSOut) -> @location(0) vec4f {
   }
   return vec4f(vec3f(0.1, 0.9, 0.45) * v + vec3f(grat), 1.0);
 }
+
+@fragment
+fn fs_vector(in: VSOut) -> @location(0) vec4f {
+  let vx = min(u32(in.uv.x * ${VEC_SIZE}.0), ${VEC_SIZE - 1}u);
+  let vy = min(u32(in.uv.y * ${VEC_SIZE}.0), ${VEC_SIZE - 1}u);
+  let norm = max(f32(maxima[2]), 1.0);
+  let v = pow(f32(vecs[vy * ${VEC_SIZE}u + vx]) / norm, 0.3);
+  // graticule: center cross + 75%/100% saturation circles + skin-tone line
+  let p = (in.uv - vec2f(0.5)) * 2.0;   // -1..1, y down
+  let r = length(p);
+  var grat = 0.0;
+  if (abs(r - 0.75) < 0.008 || abs(r - 1.0) < 0.008) { grat = 0.10; }
+  if (abs(p.x) < 0.004 || abs(p.y) < 0.004) { grat = max(grat, 0.08); }
+  // skin-tone line: ~33° up-left of +Cr axis (angle ≈ 123° from +x, y-up)
+  let ang = atan2(-p.y, p.x);
+  if (r > 0.05 && r < 0.9 && abs(ang - 2.147) < 0.015) { grat = max(grat, 0.14); }
+  return vec4f(vec3f(0.55, 0.85, 1.0) * v + vec3f(grat), 1.0);
+}
 `;
 
 export class ScopesRenderer {
@@ -100,12 +129,15 @@ export class ScopesRenderer {
   #computePipeline: GPUComputePipeline;
   #histPipeline: GPURenderPipeline;
   #wavePipeline: GPURenderPipeline;
+  #vecPipeline: GPURenderPipeline;
   #histBuf: GPUBuffer;
   #waveBuf: GPUBuffer;
   #metaBuf: GPUBuffer;
+  #vecBuf: GPUBuffer;
   #drawGroup: GPUBindGroup;
   #histCtx: GPUCanvasContext | null = null;
   #waveCtx: GPUCanvasContext | null = null;
+  #vecCtx: GPUCanvasContext | null = null;
   #format: GPUTextureFormat;
 
   constructor(device: GPUDevice, canvasFormat: GPUTextureFormat) {
@@ -121,7 +153,11 @@ export class ScopesRenderer {
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     this.#metaBuf = device.createBuffer({
-      size: 8,
+      size: 12,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    this.#vecBuf = device.createBuffer({
+      size: VEC_SIZE * VEC_SIZE * 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
 
@@ -133,7 +169,7 @@ export class ScopesRenderer {
     // Explicit shared layout: "auto" layouts are per-pipeline (not
     // interchangeable) and drop bindings a shader doesn't reference.
     const drawLayout = device.createBindGroupLayout({
-      entries: [0, 1, 2].map((binding) => ({
+      entries: [0, 1, 2, 3].map((binding) => ({
         binding,
         visibility: GPUShaderStage.FRAGMENT,
         buffer: { type: "read-only-storage" as const },
@@ -142,18 +178,16 @@ export class ScopesRenderer {
     const drawPipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [drawLayout] });
 
     const drawModule = device.createShaderModule({ code: DRAW_WGSL });
-    this.#histPipeline = device.createRenderPipeline({
-      layout: drawPipelineLayout,
-      vertex: { module: drawModule, entryPoint: "vs" },
-      fragment: { module: drawModule, entryPoint: "fs_hist", targets: [{ format: canvasFormat }] },
-      primitive: { topology: "triangle-list" },
-    });
-    this.#wavePipeline = device.createRenderPipeline({
-      layout: drawPipelineLayout,
-      vertex: { module: drawModule, entryPoint: "vs" },
-      fragment: { module: drawModule, entryPoint: "fs_wave", targets: [{ format: canvasFormat }] },
-      primitive: { topology: "triangle-list" },
-    });
+    const makeDraw = (entryPoint: string): GPURenderPipeline =>
+      device.createRenderPipeline({
+        layout: drawPipelineLayout,
+        vertex: { module: drawModule, entryPoint: "vs" },
+        fragment: { module: drawModule, entryPoint, targets: [{ format: canvasFormat }] },
+        primitive: { topology: "triangle-list" },
+      });
+    this.#histPipeline = makeDraw("fs_hist");
+    this.#wavePipeline = makeDraw("fs_wave");
+    this.#vecPipeline = makeDraw("fs_vector");
 
     this.#drawGroup = device.createBindGroup({
       layout: drawLayout,
@@ -161,13 +195,19 @@ export class ScopesRenderer {
         { binding: 0, resource: { buffer: this.#histBuf } },
         { binding: 1, resource: { buffer: this.#waveBuf } },
         { binding: 2, resource: { buffer: this.#metaBuf } },
+        { binding: 3, resource: { buffer: this.#vecBuf } },
       ],
     });
   }
 
-  attachCanvases(hist: HTMLCanvasElement | null, wave: HTMLCanvasElement | null): void {
+  attachCanvases(
+    hist: HTMLCanvasElement | null,
+    wave: HTMLCanvasElement | null,
+    vector: HTMLCanvasElement | null = null,
+  ): void {
     this.#histCtx = hist ? this.#configure(hist) : null;
     this.#waveCtx = wave ? this.#configure(wave) : null;
+    this.#vecCtx = vector ? this.#configure(vector) : null;
   }
 
   #configure(canvas: HTMLCanvasElement): GPUCanvasContext {
@@ -176,15 +216,16 @@ export class ScopesRenderer {
     return ctx;
   }
 
-  /** Analyze the graded intermediate and redraw both scopes. */
+  /** Analyze the graded intermediate and redraw the attached scopes. */
   update(intermediate: GPUTexture): void {
-    if (!this.#histCtx && !this.#waveCtx) return;
+    if (!this.#histCtx && !this.#waveCtx && !this.#vecCtx) return;
     const device = this.#device;
     const encoder = device.createCommandEncoder();
 
     encoder.clearBuffer(this.#histBuf);
     encoder.clearBuffer(this.#waveBuf);
     encoder.clearBuffer(this.#metaBuf);
+    encoder.clearBuffer(this.#vecBuf);
 
     const computeGroup = device.createBindGroup({
       layout: this.#computePipeline.getBindGroupLayout(0),
@@ -193,6 +234,7 @@ export class ScopesRenderer {
         { binding: 1, resource: { buffer: this.#histBuf } },
         { binding: 2, resource: { buffer: this.#waveBuf } },
         { binding: 3, resource: { buffer: this.#metaBuf } },
+        { binding: 4, resource: { buffer: this.#vecBuf } },
       ],
     });
     const pass = encoder.beginComputePass();
@@ -209,6 +251,9 @@ export class ScopesRenderer {
     }
     if (this.#waveCtx) {
       this.#draw(encoder, this.#wavePipeline, this.#waveCtx);
+    }
+    if (this.#vecCtx) {
+      this.#draw(encoder, this.#vecPipeline, this.#vecCtx);
     }
     device.queue.submit([encoder.finish()]);
   }

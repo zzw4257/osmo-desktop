@@ -24,7 +24,11 @@ export interface EditorEngine {
   applyGrade(grade: Grade): void;
   applyCreativeLut(cube: Cube3dLut | null): void;
   applyInputLut(cube: Cube3dLut | null): void;
-  attachScopes(hist: HTMLCanvasElement | null, wave: HTMLCanvasElement | null): void;
+  attachScopes(
+    hist: HTMLCanvasElement | null,
+    wave: HTMLCanvasElement | null,
+    vector: HTMLCanvasElement | null,
+  ): void;
 }
 
 /**
@@ -140,8 +144,8 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
       [rerenderPaused],
     ),
     attachScopes: useCallback(
-      (hist: HTMLCanvasElement | null, wave: HTMLCanvasElement | null) => {
-        scopesRef.current?.attachCanvases(hist, wave);
+      (hist: HTMLCanvasElement | null, wave: HTMLCanvasElement | null, vector: HTMLCanvasElement | null) => {
+        scopesRef.current?.attachCanvases(hist, wave, vector);
         rerenderPaused();
       },
       [rerenderPaused],
