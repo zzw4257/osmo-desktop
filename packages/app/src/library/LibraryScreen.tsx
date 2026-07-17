@@ -23,11 +23,12 @@ import { thumbnailFor } from "./thumbs";
 
 export interface LibraryScreenProps {
   onOpenClip: (clip: LibraryClip) => void;
+  onOpenMonitor: () => void;
 }
 
 const gradeStore = new IdbGradeStore();
 
-export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
+export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps) {
   const [clips, setClips] = useState<LibraryClip[]>([]);
   const [folderName, setFolderName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -187,6 +188,18 @@ export function LibraryScreen({ onOpenClip }: LibraryScreenProps) {
           {clips.length > 0 ? ` · ${clips.length} 个视频` : ""}
         </span>
         <div style={{ flex: 1 }} />
+        <button
+          onClick={onOpenMonitor}
+          style={{
+            ...primaryBtn,
+            background: tokens.color.surfaceRaised,
+            color: tokens.color.text,
+            border: `1px solid ${tokens.color.border}`,
+          }}
+          title="相机网络摄像头模式实时监看（带调色与示波器）"
+        >
+          📹 监看
+        </button>
         {selected.size > 0 && (
           <button
             onClick={() => void deleteSelected()}
