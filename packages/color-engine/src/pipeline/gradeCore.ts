@@ -88,6 +88,33 @@ const D_GAMUT_TO_REC709 = mat3x3f(
   vec3f(-0.0949, -0.2359, 1.284),   // column 2
 );
 
+// BT.2020 → BT.709 (linear light), column-major
+const REC2020_TO_REC709 = mat3x3f(
+  vec3f(1.6605, -0.1246, -0.0182),
+  vec3f(-0.5876, 1.1329, -0.1006),
+  vec3f(-0.0728, -0.0083, 1.1187),
+);
+
+// BT.2100 HLG inverse OETF (per channel, signal 0..1 → scene linear 0..1)
+fn hlg_inv_oetf(v: vec3f) -> vec3f {
+  let a = 0.17883277;
+  let b = 0.28466892; // 1 - 4a
+  let c = 0.55991073; // 0.5 - a*ln(4a)
+  let lo = v * v / 3.0;
+  let hi = (exp((v - vec3f(c)) / a) + vec3f(b)) / 12.0;
+  return select(hi, lo, v <= vec3f(0.5));
+}
+
+// HLG → SDR Rec.709 linear: inverse OETF → OOTF (γ=1.2 via luminance,
+// BT.2100) → gamut map. Display-referred approximation for SDR delivery.
+fn hlg_to_rec709_linear(v: vec3f) -> vec3f {
+  let scene = hlg_inv_oetf(clamp(v, vec3f(0.0), vec3f(1.0)));
+  let y_scene = dot(scene, vec3f(0.2627, 0.678, 0.0593)); // BT.2020 luma
+  let ootf_gain = pow(max(y_scene, 1e-5), 0.2);           // γ 1.2 → Y^(γ-1)
+  let display2020 = scene * ootf_gain;
+  return max(REC2020_TO_REC709 * display2020, vec3f(0.0));
+}
+
 fn srgbish_to_linear(v: vec3f) -> vec3f {
   return pow(max(v, vec3f(0.0)), vec3f(GRADE_GAMMA));
 }
@@ -171,6 +198,9 @@ fn grade_pixel(raw: vec3f, uv: vec2f) -> vec3f {
   } else if (P.input_mode == 2u) {
     // 3D LUT maps encoded source → Rec.709 display-encoded
     lin = srgbish_to_linear(sample_lut3d(input_lut, raw, f32(textureDimensions(input_lut).x)));
+  } else if (P.input_mode == 3u) {
+    // HLG → SDR (BT.2100 inverse OETF + OOTF + 2020→709)
+    lin = hlg_to_rec709_linear(raw);
   } else {
     lin = srgbish_to_linear(raw);
   }

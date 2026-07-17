@@ -17,7 +17,7 @@ const PROFILES: Array<{ value: ColorProfile; label: string }> = [
   { value: "dlog", label: "D-Log（Pocket 4 · 官方公式）" },
   { value: "dlog-m", label: "D-Log M（Pocket 3 · 需导入 LUT）" },
   { value: "dlog2", label: "D-Log 2（Pocket 4P · 需导入 LUT）" },
-  { value: "hlg", label: "HLG（M2 支持）" },
+  { value: "hlg", label: "HLG（BT.2100 → SDR 映射）" },
 ];
 
 const CURVE_TABS = [

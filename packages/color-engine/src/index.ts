@@ -1,5 +1,6 @@
 export * from "./grade/schema";
 export * from "./science/dlog";
+export * from "./science/hlg";
 export * from "./curves/spline";
 export * from "./lut/cubeParser";
 export * from "./lut/halfFloat";
