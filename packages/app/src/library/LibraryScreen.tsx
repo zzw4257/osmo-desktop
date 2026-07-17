@@ -1,7 +1,9 @@
 /// <reference path="./fsAccess.d.ts" />
 import type { DjiVolume } from "@osmo/platform";
 import {
+  defaultLibraryDir,
   deleteMediaFilesNative,
+  importCopyNative,
   isTauri,
   listDjiVolumes,
   onDjiVolumesChanged,
@@ -95,6 +97,49 @@ export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps)
       return next;
     });
   }, []);
+
+  const importSelected = useCallback(async () => {
+    const targets = clips.filter((c) => selected.has(c.key) && c.srcPath);
+    if (targets.length === 0) return;
+    setBusy(true);
+    setDeleteReport(`导入中… 0/${targets.length}`);
+    try {
+      const destDir = await defaultLibraryDir();
+      let handled = 0;
+      await new Promise<void>((resolve) => {
+        void importCopyNative(
+          targets.map((c) => ({ srcPath: c.srcPath!, lrfPath: c.lrfSrcPath })),
+          destDir,
+          (ev) => {
+            if (ev.type === "file") {
+              handled++;
+              setDeleteReport(`导入中… ${handled} 个文件（${ev.name}: ${ev.status}）`);
+            } else {
+              setDeleteReport(
+                `已导入 ${ev.copied} 个文件（跳过 ${ev.skipped} 个已存在${
+                  ev.failed ? `，失败 ${ev.failed} 个` : ""
+                }）→ ${ev.destDir}`,
+              );
+              // Switch the library to the managed folder — clip keys are
+              // name:size, so grades/badges follow the copies seamlessly.
+              void (async () => {
+                setClips(await scanNativeFolder(ev.destDir));
+                const name = ev.destDir.split("/").pop() ?? ev.destDir;
+                setFolderName(name);
+                void saveActiveSource({ kind: "native", path: ev.destDir, name });
+                setSelected(new Set());
+                resolve();
+              })();
+            }
+          },
+        );
+      });
+    } catch (e) {
+      setDeleteReport(`导入失败: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }, [clips, selected]);
 
   const deleteSelected = useCallback(async () => {
     const targets = clips.filter((c) => selected.has(c.key) && c.srcPath);
@@ -201,13 +246,18 @@ export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps)
           📹 监看
         </button>
         {selected.size > 0 && (
-          <button
-            onClick={() => void deleteSelected()}
-            disabled={busy}
-            style={{ ...primaryBtn, background: tokens.color.bad, color: "#fff" }}
-          >
-            删除所选（{selected.size}）
-          </button>
+          <>
+            <button onClick={() => void importSelected()} disabled={busy} style={primaryBtn}>
+              导入素材库（{selected.size}）
+            </button>
+            <button
+              onClick={() => void deleteSelected()}
+              disabled={busy}
+              style={{ ...primaryBtn, background: tokens.color.bad, color: "#fff" }}
+            >
+              删除所选（{selected.size}）
+            </button>
+          </>
         )}
         {supportsPicker ? (
           <button onClick={pickFolder} style={primaryBtn} disabled={busy}>

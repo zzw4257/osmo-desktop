@@ -16,6 +16,7 @@ export async function scanNativeFolder(root: string): Promise<LibraryClip[]> {
       isDji: parsed !== null,
       hasLrf: e.lrfPath !== null,
       srcPath: e.path,
+      lrfSrcPath: e.lrfPath,
       getFile: () => readNativeFile(e.path),
       getLrf: () => (e.lrfPath ? readNativeFile(e.lrfPath) : Promise.resolve(null)),
     };

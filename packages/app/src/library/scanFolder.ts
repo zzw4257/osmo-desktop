@@ -13,6 +13,9 @@ export interface LibraryClip {
   /** Absolute filesystem path — only known on the desktop (native scan);
    * enables the native export pipeline. */
   srcPath: string | null;
+  /** Absolute path of the paired LRF (native scan only) — copy-import
+   * brings the proxy along. */
+  lrfSrcPath: string | null;
   getFile(): Promise<Blob>;
   getLrf(): Promise<Blob | null>;
 }
@@ -95,6 +98,7 @@ async function buildClips(entries: RawEntry[]): Promise<LibraryClip[]> {
       isDji: parsed !== null,
       hasLrf: !!lrfEntry,
       srcPath: null,
+      lrfSrcPath: null,
       getFile: e.open,
       getLrf: lrfEntry ? lrfEntry.open : () => Promise.resolve(null),
     });

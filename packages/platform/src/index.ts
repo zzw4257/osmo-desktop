@@ -122,3 +122,25 @@ export async function deleteMediaFilesNative(
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<DeleteResult[]>("delete_media_files", { files });
 }
+
+// ---- copy-import into the managed library (desktop) ----
+
+export type ImportEvent =
+  | { type: "file"; name: string; status: string }
+  | { type: "done"; copied: number; skipped: number; failed: number; destDir: string };
+
+export async function defaultLibraryDir(): Promise<string> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<string>("default_library_dir");
+}
+
+export async function importCopyNative(
+  files: Array<{ srcPath: string; lrfPath: string | null }>,
+  destDir: string,
+  onEvent: (ev: ImportEvent) => void,
+): Promise<void> {
+  const { invoke, Channel } = await import("@tauri-apps/api/core");
+  const channel = new Channel<ImportEvent>();
+  channel.onmessage = onEvent;
+  await invoke("import_copy", { files, destDir, onEvent: channel });
+}

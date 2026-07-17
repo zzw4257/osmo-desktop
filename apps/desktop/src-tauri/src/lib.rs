@@ -1,5 +1,6 @@
 pub mod device;
 pub mod export;
+pub mod import;
 pub mod scan;
 
 use export::{ExportArgs, ExportEvent};
@@ -51,7 +52,9 @@ pub fn run() {
             export_cancel,
             scan::scan_media_dir,
             device::list_dji_volumes,
-            device::delete_media_files
+            device::delete_media_files,
+            import::default_library_dir,
+            import::import_copy
         ])
         .setup(|app| {
             device::spawn_volume_watcher(app.handle().clone());
