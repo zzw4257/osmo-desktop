@@ -95,14 +95,31 @@ export class ClipPlayer {
     this.#loop();
   }
 
-  #restartFrom(targetUs: number): void {
+  #restartFrom(targetUs: number, retry = 0): void {
     const demuxer = this.#demuxer!;
     this.#teardownSession();
     this.#feedIndex = demuxer.keyframeIndexBefore(targetUs);
     this.#session = new VideoDecodeSession(
       demuxer.decoderConfig(),
       (frame) => this.#frameQueue.push(frame),
-      () => this.#teardownSession(),
+      () => {
+        // Decoder died (e.g. transient hardware-session exhaustion). Retry
+        // once after a beat; otherwise settle into paused instead of
+        // spinning on a null session forever.
+        this.#teardownSession();
+        if (retry < 1 && this.#demuxer) {
+          setTimeout(() => {
+            if (this.#demuxer && this.#session === null) {
+              this.#restartFrom(targetUs, retry + 1);
+              this.#loop();
+            }
+          }, 250);
+        } else {
+          this.#seekTargetUs = null;
+          this.#stepPending = false;
+          if (this.#state === "playing") this.#state = "paused";
+        }
+      },
     );
   }
 

@@ -9,6 +9,7 @@ interface ActiveClip {
   key: string;
   name: string;
   srcPath: string | null;
+  lrf: Blob | null;
 }
 
 /** Application shell shared by apps/desktop and apps/web. */
@@ -23,8 +24,8 @@ export function App() {
   }, []);
 
   const openClip = useCallback(async (clip: LibraryClip) => {
-    const file = await clip.getFile();
-    setActiveClip({ file, key: clip.key, name: clip.name, srcPath: clip.srcPath });
+    const [file, lrf] = await Promise.all([clip.getFile(), clip.getLrf()]);
+    setActiveClip({ file, key: clip.key, name: clip.name, srcPath: clip.srcPath, lrf });
     setView("editor");
   }, []);
 

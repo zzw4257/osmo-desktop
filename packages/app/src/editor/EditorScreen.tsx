@@ -12,7 +12,9 @@ const gradeStore = new IdbGradeStore();
 
 export interface EditorScreenProps {
   /** Open with this clip (from the library); user can still 打开视频. */
-  initialClip?: { file: Blob; key: string; name: string; srcPath: string | null } | undefined;
+  initialClip?:
+    | { file: Blob; key: string; name: string; srcPath: string | null; lrf: Blob | null }
+    | undefined;
   onBack?: (() => void) | undefined;
 }
 
@@ -40,6 +42,8 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
   const [inputCube, setInputCube] = useState<Cube3dLut | null>(null);
   const [creativeCube, setCreativeCube] = useState<Cube3dLut | null>(null);
   const [exportState, setExportState] = useState<ExportState | null>(null);
+  /** Non-null while the user drags the seek bar (proxy scrub in flight). */
+  const [dragUs, setDragUs] = useState<number | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const historyRef = useRef<Grade[]>([]);
   const futureRef = useRef<Grade[]>([]);
@@ -108,7 +112,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
   }, [engine, persistSoon]);
 
   const openClip = useCallback(
-    async (file: Blob, key: string, name: string, src: string | null) => {
+    async (file: Blob, key: string, name: string, src: string | null, lrf: Blob | null) => {
       setFileName(name);
       setClipKey(key);
       setSrcPath(src);
@@ -119,6 +123,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
       setGrade(restored);
       engine.applyGrade(restored);
       setClipInfo(await engine.loadFile(file));
+      await engine.attachScrubProxy(lrf);
     },
     [engine],
   );
@@ -127,7 +132,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      await openClip(file, clipKeyForFile(file), file.name, null);
+      await openClip(file, clipKeyForFile(file), file.name, null, null);
     },
     [openClip],
   );
@@ -137,7 +142,13 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
   useEffect(() => {
     if (initialClip && engine.ready && !initialLoaded.current) {
       initialLoaded.current = true;
-      void openClip(initialClip.file, initialClip.key, initialClip.name, initialClip.srcPath);
+      void openClip(
+        initialClip.file,
+        initialClip.key,
+        initialClip.name,
+        initialClip.srcPath,
+        initialClip.lrf,
+      );
     }
   }, [initialClip, engine.ready, openClip]);
 
@@ -368,12 +379,28 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
             type="range"
             min={0}
             max={Math.max(durationUs, 1)}
-            value={positionUs}
-            onChange={(e) => engine.seek(Number(e.target.value))}
+            value={dragUs ?? positionUs}
+            onChange={(e) => {
+              const us = Number(e.target.value);
+              setDragUs(us);
+              engine.scrub(us);
+            }}
+            onPointerUp={() => {
+              if (dragUs !== null) {
+                engine.seek(dragUs);
+                setDragUs(null);
+              }
+            }}
+            onKeyUp={() => {
+              if (dragUs !== null) {
+                engine.seek(dragUs);
+                setDragUs(null);
+              }
+            }}
             style={{ flex: 1, accentColor: tokens.color.accent }}
           />
           <span style={{ fontSize: 11, fontFamily: tokens.font.mono, color: tokens.color.textDim }}>
-            {fmtUs(positionUs)} / {fmtUs(durationUs)}
+            {fmtUs(dragUs ?? positionUs)} / {fmtUs(durationUs)}
           </span>
           <span style={{ fontSize: 11, fontFamily: tokens.font.mono, color: tokens.color.textDim }}>
             {stats ? `${stats.presentedFps}fps` : ""}

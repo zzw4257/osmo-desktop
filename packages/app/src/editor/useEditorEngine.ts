@@ -1,7 +1,7 @@
 import type { Cube3dLut, Grade } from "@osmo/color-engine";
 import { GpuContext, GradeRenderer } from "@osmo/color-engine";
-import type { ClipPlayerStats } from "@osmo/media-pipeline";
-import { ClipPlayer, StreamingDemuxer } from "@osmo/media-pipeline";
+import type { ClipPlayerStats, FrameSink } from "@osmo/media-pipeline";
+import { ClipPlayer, ScrubPreview, StreamingDemuxer } from "@osmo/media-pipeline";
 import { ScopesRenderer } from "@osmo/scopes";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -17,10 +17,14 @@ export interface EditorEngine {
   error: string | null;
   stats: ClipPlayerStats | null;
   loadFile(file: Blob): Promise<LoadedClipInfo>;
+  /** Attach the LRF proxy for fast scrubbing (call after loadFile). */
+  attachScrubProxy(lrf: Blob | null): Promise<void>;
   play(): void;
   pause(): void;
   stepForward(): void;
   seek(us: number): void;
+  /** Fast preview while dragging; falls back to precise seek without proxy. */
+  scrub(us: number): void;
   applyGrade(grade: Grade): void;
   applyCreativeLut(cube: Cube3dLut | null): void;
   applyInputLut(cube: Cube3dLut | null): void;
@@ -47,6 +51,8 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
   const playerRef = useRef<ClipPlayer | null>(null);
   const lastFrameRef = useRef<VideoFrame | null>(null);
   const scopesRef = useRef<ScopesRenderer | null>(null);
+  const sinkRef = useRef<FrameSink | null>(null);
+  const scrubberRef = useRef<ScrubPreview | null>(null);
 
   useEffect(() => {
     let disposed = false;
@@ -74,6 +80,7 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
             }
           },
         };
+        sinkRef.current = sink;
         playerRef.current = new ClipPlayer(sink, setStats);
         setReady(true);
       } catch (e) {
@@ -106,6 +113,8 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
     error,
     stats,
     loadFile: useCallback(async (file: Blob) => {
+      scrubberRef.current?.dispose();
+      scrubberRef.current = null;
       const demuxer = await StreamingDemuxer.open(file);
       const track = demuxer.videoTrack;
       const durationS = track.durationUs / 1e6;
@@ -118,10 +127,30 @@ export function useEditorEngine(canvasRef: React.RefObject<HTMLCanvasElement | n
       await playerRef.current!.load(demuxer);
       return info;
     }, []),
+    attachScrubProxy: useCallback(async (lrf: Blob | null) => {
+      scrubberRef.current?.dispose();
+      scrubberRef.current = null;
+      if (!lrf || !sinkRef.current) return;
+      try {
+        const proxyDemuxer = await StreamingDemuxer.open(lrf);
+        scrubberRef.current = new ScrubPreview(proxyDemuxer, sinkRef.current);
+      } catch {
+        // proxy is optional; scrubbing falls back to precise seeks
+      }
+    }, []),
     play: useCallback(() => playerRef.current?.play(), []),
     pause: useCallback(() => playerRef.current?.pause(), []),
     stepForward: useCallback(() => playerRef.current?.stepForward(), []),
     seek: useCallback((us: number) => playerRef.current?.seek(us), []),
+    scrub: useCallback((us: number) => {
+      const scrubber = scrubberRef.current;
+      if (scrubber) {
+        playerRef.current?.pause();
+        scrubber.request(us);
+      } else {
+        playerRef.current?.seek(us);
+      }
+    }, []),
     applyGrade: useCallback(
       (grade: Grade) => {
         rendererRef.current?.setGrade(grade);
