@@ -41,6 +41,11 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
   const [creativeCube, setCreativeCube] = useState<Cube3dLut | null>(null);
   const [exportState, setExportState] = useState<ExportState | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const historyRef = useRef<Grade[]>([]);
+  const futureRef = useRef<Grade[]>([]);
+  const lastPushRef = useRef(0);
+  const gradeRef = useRef(grade);
+  gradeRef.current = grade;
 
   useEffect(() => {
     if (engine.ready) {
@@ -52,18 +57,55 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
     }
   }, [engine, engine.ready, showScopes]);
 
-  // Grade → engine + debounced persistence
+  // Grade → engine + debounced persistence (grade + undo history)
+  const persistSoon = useCallback(
+    (next: Grade) => {
+      if (!clipKey) return;
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        void gradeStore.save(clipKey, next);
+        void gradeStore.saveHistory(clipKey, historyRef.current);
+      }, 400);
+    },
+    [clipKey],
+  );
+
   const updateGrade = useCallback(
     (next: Grade) => {
+      // Coalesce rapid slider drags into one undo step (400ms window)
+      const now = performance.now();
+      if (now - lastPushRef.current > 400) {
+        historyRef.current.push(gradeRef.current);
+        if (historyRef.current.length > 40) historyRef.current.shift();
+        futureRef.current = [];
+      }
+      lastPushRef.current = now;
       setGrade(next);
       engine.applyGrade(next);
-      if (clipKey) {
-        if (saveTimer.current) clearTimeout(saveTimer.current);
-        saveTimer.current = setTimeout(() => void gradeStore.save(clipKey, next), 400);
-      }
+      persistSoon(next);
     },
-    [engine, clipKey],
+    [engine, persistSoon],
   );
+
+  const undo = useCallback(() => {
+    const prev = historyRef.current.pop();
+    if (!prev) return;
+    futureRef.current.push(gradeRef.current);
+    lastPushRef.current = 0;
+    setGrade(prev);
+    engine.applyGrade(prev);
+    persistSoon(prev);
+  }, [engine, persistSoon]);
+
+  const redo = useCallback(() => {
+    const next = futureRef.current.pop();
+    if (!next) return;
+    historyRef.current.push(gradeRef.current);
+    lastPushRef.current = 0;
+    setGrade(next);
+    engine.applyGrade(next);
+    persistSoon(next);
+  }, [engine, persistSoon]);
 
   const openClip = useCallback(
     async (file: Blob, key: string, name: string, src: string | null) => {
@@ -71,6 +113,9 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
       setClipKey(key);
       setSrcPath(src);
       const restored = (await gradeStore.load(key)) ?? defaultGrade();
+      historyRef.current = await gradeStore.loadHistory(key);
+      futureRef.current = [];
+      lastPushRef.current = 0;
       setGrade(restored);
       engine.applyGrade(restored);
       setClipInfo(await engine.loadFile(file));
@@ -152,9 +197,15 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
     }
   }, [srcPath, clipInfo, fileName, grade, inputCube, creativeCube]);
 
-  // Keyboard transport: space = play/pause, arrows = step/seek
+  // Keyboard: space = play/pause, → = step, ⌘Z/⇧⌘Z = undo/redo
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.code === "KeyZ") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
       if ((e.target as HTMLElement)?.tagName === "INPUT" || (e.target as HTMLElement)?.tagName === "SELECT") return;
       if (e.code === "Space") {
         e.preventDefault();
@@ -166,7 +217,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [engine]);
+  }, [engine, undo, redo]);
 
   const stats = engine.stats;
   const playing = stats?.state === "playing";
@@ -355,6 +406,14 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
           }}
         >
           调色
+          <span style={{ display: "flex", gap: 4 }}>
+            <button onClick={undo} title="撤销 ⌘Z" style={historyBtn}>
+              ↶
+            </button>
+            <button onClick={redo} title="重做 ⇧⌘Z" style={historyBtn}>
+              ↷
+            </button>
+          </span>
           <button
             onClick={() => updateGrade({ ...defaultGrade(grade.input.profile) })}
             style={{
@@ -454,6 +513,18 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
     </div>
   );
 }
+
+const historyBtn: React.CSSProperties = {
+  background: "none",
+  border: `1px solid ${tokens.color.border}`,
+  color: tokens.color.textDim,
+  borderRadius: 6,
+  fontSize: 12,
+  width: 26,
+  height: 22,
+  cursor: "pointer",
+  lineHeight: 1,
+};
 
 const scopeFigure: React.CSSProperties = { margin: 0 };
 

@@ -11,6 +11,10 @@ export interface GradeStore {
   load(clipKey: string): Promise<Grade | null>;
   save(clipKey: string, grade: Grade): Promise<void>;
   listKeys(): Promise<string[]>;
+  /** Undo history (oldest→newest snapshots), persisted so undo survives
+   * reopening the app. */
+  loadHistory(clipKey: string): Promise<Grade[]>;
+  saveHistory(clipKey: string, history: Grade[]): Promise<void>;
 }
 
 const DB_NAME = "osmo-desktop";
@@ -60,11 +64,38 @@ export class IdbGradeStore implements GradeStore {
     const db = await this.#database();
     return new Promise((resolve, reject) => {
       const req = db.transaction(STORE, "readonly").objectStore(STORE).getAllKeys();
-      req.onsuccess = () => resolve(req.result as string[]);
+      req.onsuccess = () =>
+        resolve((req.result as string[]).filter((k) => !k.endsWith(HISTORY_SUFFIX)));
       req.onerror = () => reject(req.error ?? new Error("grade listKeys failed"));
     });
   }
+
+  async loadHistory(clipKey: string): Promise<Grade[]> {
+    const db = await this.#database();
+    return new Promise((resolve, reject) => {
+      const req = db
+        .transaction(STORE, "readonly")
+        .objectStore(STORE)
+        .get(clipKey + HISTORY_SUFFIX);
+      req.onsuccess = () =>
+        resolve(Array.isArray(req.result) ? (req.result as unknown[]).map(hydrateGrade) : []);
+      req.onerror = () => reject(req.error ?? new Error("history load failed"));
+    });
+  }
+
+  async saveHistory(clipKey: string, history: Grade[]): Promise<void> {
+    const db = await this.#database();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put(history.slice(-MAX_HISTORY), clipKey + HISTORY_SUFFIX);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error("history save failed"));
+    });
+  }
 }
+
+const HISTORY_SUFFIX = "::history";
+const MAX_HISTORY = 40;
 
 /** Stable identity for a local file until content hashing lands (M2). */
 export function clipKeyForFile(file: File): string {
