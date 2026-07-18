@@ -21,11 +21,12 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
   const dragging = useRef(false);
 
   const [r, g, b, master] = value;
+  const touched = r !== 0 || g !== 0 || b !== 0;
   // Inverse of the forward mapping below: recover disc position from rgb.
   const xUnit = (r - 0.5 * g - 0.5 * b) / (1.5 * range);
   const yUnitUp = (0.866 * (g - b)) / (1.5 * range);
-  const px = clamp(xUnit, -1, 1) * (size / 2 - 6);
-  const py = -clamp(yUnitUp, -1, 1) * (size / 2 - 6);
+  const px = clamp(xUnit, -1, 1) * (size / 2 - 7);
+  const py = -clamp(yUnitUp, -1, 1) * (size / 2 - 7);
 
   const applyFromEvent = useCallback(
     (e: { clientX: number; clientY: number }) => {
@@ -49,8 +50,16 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-      <span style={{ fontSize: 11, color: tokens.color.textDim }}>{label}</span>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+      <span
+        style={{
+          fontSize: 11,
+          color: touched ? tokens.color.text : tokens.color.textDim,
+          fontWeight: touched ? 600 : 400,
+        }}
+      >
+        {label}
+      </span>
       <div
         ref={discRef}
         onPointerDown={(e) => {
@@ -68,9 +77,11 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
           position: "relative",
           cursor: "crosshair",
           touchAction: "none",
+          boxShadow: `inset 0 0 0 1px rgba(0,0,0,0.3), ${tokens.shadow.sm}`,
           // hue ring matching the math: red at +x (0°), green at 120°, blue at 240°
           background:
-            "conic-gradient(from 90deg, #ff4444, #ff44ff, #4444ff, #44ffff, #44ff44, #ffff44, #ff4444)",
+            "conic-gradient(from 90deg, #ff5252, #ff52ff, #5252ff, #52ffff, #52ff52, #ffff52, #ff5252)",
+          filter: "saturate(0.85)",
         }}
       >
         <div
@@ -78,20 +89,22 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
             position: "absolute",
             inset: 0,
             borderRadius: "50%",
-            background: `radial-gradient(circle, ${tokens.color.surface} 35%, transparent 85%)`,
+            background: `radial-gradient(circle, ${tokens.color.surface} 32%, transparent 78%)`,
           }}
         />
         <div
           style={{
             position: "absolute",
-            left: size / 2 + px - 5,
-            top: size / 2 + py - 5,
-            width: 10,
-            height: 10,
+            left: size / 2 + px - 6,
+            top: size / 2 + py - 6,
+            width: 12,
+            height: 12,
             borderRadius: "50%",
             border: `2px solid ${tokens.color.text}`,
             background: tokens.color.bg,
+            boxShadow: "0 1px 4px rgba(0,0,0,0.6)",
             pointerEvents: "none",
+            transition: dragging.current ? "none" : `left 0.1s ${tokens.ease.out}, top 0.1s ${tokens.ease.out}`,
           }}
         />
       </div>
@@ -103,7 +116,16 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
         value={master}
         onChange={(e) => onChange([r, g, b, Number(e.target.value)])}
         onDoubleClick={() => onChange([r, g, b, 0])}
-        style={{ width: size, height: 3, accentColor: tokens.color.accent }}
+        className="osmo-slider"
+        style={{
+          width: size,
+          height: 3,
+          appearance: "none",
+          borderRadius: 2,
+          outline: "none",
+          cursor: "pointer",
+          background: `linear-gradient(to right, ${tokens.color.border} 0%, ${tokens.color.textFaint} 50%, ${tokens.color.border} 100%)`,
+        }}
         title={`${label} 主控`}
       />
     </div>

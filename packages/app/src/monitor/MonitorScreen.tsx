@@ -3,7 +3,7 @@ import { GpuContext, GradeRenderer, defaultGrade, parseCube } from "@osmo/color-
 import { attachMseStream } from "@osmo/media-pipeline";
 import { isTauri, rtmpStartNative, rtmpStopNative } from "@osmo/platform";
 import { ScopesRenderer } from "@osmo/scopes";
-import { tokens } from "@osmo/ui";
+import { BackIcon, Button, tokens } from "@osmo/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AdjustPanel } from "../editor/AdjustPanel";
 import { IdbGradeStore } from "../editor/gradeStore";
@@ -261,15 +261,16 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
-            padding: "10px 16px",
+            gap: 14,
+            padding: "10px 18px",
             borderBottom: `1px solid ${tokens.color.border}`,
+            background: tokens.color.surface,
           }}
         >
-          <button onClick={onBack} style={btn} title="返回素材库">
-            ←
-          </button>
-          <h1 style={{ color: tokens.color.accent, fontSize: 16, margin: 0, fontWeight: 700 }}>
+          <Button variant="ghost" size="icon" onClick={onBack} title="返回素材库">
+            <BackIcon size={16} />
+          </Button>
+          <h1 style={{ color: tokens.color.accent, fontSize: 15, margin: 0, fontWeight: 700, letterSpacing: 0.2 }}>
             监看
           </h1>
           <span style={{ fontSize: 12, color: tokens.color.textDim }}>
@@ -277,7 +278,16 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
           </span>
           <div style={{ flex: 1 }} />
           {isTauri() && (
-            <div style={{ display: "flex", gap: 2, background: tokens.color.surfaceRaised, borderRadius: 8, padding: 2 }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 2,
+                background: tokens.color.surfaceRaised,
+                border: `1px solid ${tokens.color.border}`,
+                borderRadius: tokens.radius.pill,
+                padding: 3,
+              }}
+            >
               {(["uvc", "rtmp"] as const).map((s) => (
                 <button
                   key={s}
@@ -285,14 +295,15 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
                     stopRef.current?.();
                     setSource(s);
                   }}
+                  className="osmo-btn"
                   style={{
                     border: "none",
-                    borderRadius: 6,
-                    padding: "5px 12px",
+                    borderRadius: tokens.radius.pill,
+                    padding: "6px 14px",
                     fontSize: 12,
                     cursor: "pointer",
                     background: source === s ? tokens.color.accent : "transparent",
-                    color: source === s ? "#141414" : tokens.color.textDim,
+                    color: source === s ? "#14140f" : tokens.color.textDim,
                     fontWeight: 600,
                   }}
                 >
@@ -310,7 +321,7 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
               color: tokens.color.text,
               border: `1px solid ${tokens.color.border}`,
               borderRadius: tokens.radius.sm,
-              padding: "6px 8px",
+              padding: "7px 10px",
               fontSize: 12,
               maxWidth: 240,
             }}
@@ -322,19 +333,12 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
               </option>
             ))}
           </select>
-          <button
+          <Button
+            variant={running ? "secondary" : "primary"}
             onClick={() => (running ? stopRef.current?.() : void (source === "rtmp" ? startRtmp() : start()))}
-            style={{
-              ...btn,
-              width: "auto",
-              padding: "0 16px",
-              background: running ? tokens.color.surfaceRaised : tokens.color.accent,
-              color: running ? tokens.color.text : "#141414",
-              fontWeight: 600,
-            }}
           >
             {running ? "停止" : "开始监看"}
-          </button>
+          </Button>
         </header>
 
         <div
@@ -351,8 +355,9 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
         >
           {rtmpUrl && (
             <div
+              className="osmo-fade-in"
               style={{
-                background: "rgba(255,106,0,0.08)",
+                background: tokens.color.accentWash,
                 border: `1px solid ${tokens.color.border}`,
                 borderRadius: tokens.radius.md,
                 padding: "10px 16px",
@@ -368,12 +373,9 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
                   {rtmpUrl}
                 </code>
               </span>
-              <button
-                onClick={() => void navigator.clipboard?.writeText(rtmpUrl)}
-                style={{ ...btn, width: "auto", padding: "0 10px", fontSize: 12 }}
-              >
+              <Button variant="secondary" size="sm" onClick={() => void navigator.clipboard?.writeText(rtmpUrl)}>
                 复制
-              </button>
+              </Button>
             </div>
           )}
           <canvas
@@ -386,11 +388,12 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
               aspectRatio: "16/9",
               background: "#000",
               borderRadius: tokens.radius.md,
+              boxShadow: tokens.shadow.lg,
             }}
           />
         </div>
 
-        <div style={{ display: "flex", gap: 12, padding: "0 16px 12px", alignItems: "flex-end" }}>
+        <div style={{ display: "flex", gap: 12, padding: "0 18px 14px", alignItems: "flex-end" }}>
           <canvas ref={histRef} width={256} height={110} style={scopeCanvas} />
           <canvas ref={waveRef} width={512} height={110} style={{ ...scopeCanvas, width: 320 }} />
           <canvas ref={vecRef} width={256} height={256} style={{ ...scopeCanvas, width: 110, height: 110 }} />
@@ -409,9 +412,10 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
       >
         <div
           style={{
-            padding: "10px 12px",
+            padding: "12px 14px",
             fontSize: 13,
             fontWeight: 700,
+            letterSpacing: 0.2,
             borderBottom: `1px solid ${tokens.color.border}`,
           }}
         >
@@ -436,22 +440,11 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
   );
 }
 
-const btn: React.CSSProperties = {
-  background: tokens.color.surfaceRaised,
-  color: tokens.color.text,
-  border: `1px solid ${tokens.color.border}`,
-  borderRadius: tokens.radius.sm,
-  width: 36,
-  height: 30,
-  cursor: "pointer",
-  fontSize: 14,
-};
-
 const scopeCanvas: React.CSSProperties = {
   width: 200,
   height: 90,
   background: "#000",
-  borderRadius: 6,
-  border: `1px solid ${tokens.color.border}`,
+  borderRadius: tokens.radius.sm,
+  boxShadow: `inset 0 0 0 1px ${tokens.color.border}`,
   display: "block",
 };

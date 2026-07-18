@@ -1,3 +1,4 @@
+import { GlobalStyle } from "@osmo/ui";
 import { useCallback, useEffect, useState } from "react";
 import { EditorScreen } from "./editor/EditorScreen";
 import type { LibraryClip } from "./library/scanFolder";
@@ -30,13 +31,19 @@ export function App() {
     setView("editor");
   }, []);
 
-  if (view === "monitor") return <MonitorScreen onBack={() => setView("library")} />;
-  if (view === "editor")
-    return <EditorScreen initialClip={activeClip} onBack={() => setView("library")} />;
   return (
-    <LibraryScreen
-      onOpenClip={(clip) => void openClip(clip)}
-      onOpenMonitor={() => setView("monitor")}
-    />
+    <>
+      <GlobalStyle />
+      {view === "monitor" ? (
+        <MonitorScreen onBack={() => setView("library")} />
+      ) : view === "editor" ? (
+        <EditorScreen initialClip={activeClip} onBack={() => setView("library")} />
+      ) : (
+        <LibraryScreen
+          onOpenClip={(clip) => void openClip(clip)}
+          onOpenMonitor={() => setView("monitor")}
+        />
+      )}
+    </>
   );
 }

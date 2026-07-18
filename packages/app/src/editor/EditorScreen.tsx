@@ -1,7 +1,19 @@
 import type { Cube3dLut, Grade } from "@osmo/color-engine";
 import { buildExportPayload, defaultGrade, parseCube } from "@osmo/color-engine";
 import { exportBeginNative, exportCancelNative, isTauri, pickSavePathNative } from "@osmo/platform";
-import { tokens } from "@osmo/ui";
+import {
+  BackIcon,
+  Button,
+  CheckIcon,
+  CloseIcon,
+  PauseIcon,
+  PlayIcon,
+  RedoIcon,
+  ScopesIcon,
+  StepForwardIcon,
+  UndoIcon,
+  tokens,
+} from "@osmo/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { markClipExported } from "../library/libraryStore";
 import { AdjustPanel } from "./AdjustPanel";
@@ -304,37 +316,46 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
-            padding: "10px 16px",
+            gap: 14,
+            padding: "10px 18px",
             borderBottom: `1px solid ${tokens.color.border}`,
+            background: tokens.color.surface,
           }}
         >
           {onBack && (
-            <button onClick={onBack} style={transportBtn} title="返回素材库">
-              ←
-            </button>
+            <Button variant="ghost" size="icon" onClick={onBack} title="返回素材库">
+              <BackIcon size={16} />
+            </Button>
           )}
-          <h1 style={{ color: tokens.color.accent, fontSize: 16, margin: 0, fontWeight: 700 }}>
+          <h1
+            style={{
+              color: tokens.color.accent,
+              fontSize: 15,
+              margin: 0,
+              fontWeight: 700,
+              letterSpacing: 0.2,
+            }}
+          >
             OSMO Desktop
           </h1>
-          <span style={{ fontSize: 12, color: tokens.color.textDim }}>
+          <span
+            style={{
+              fontSize: 12,
+              color: tokens.color.textDim,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: 260,
+            }}
+          >
             {fileName ?? "未加载素材"}
           </span>
           <div style={{ flex: 1 }} />
           {canExport && (
-            <button
+            <Button
+              variant="primary"
               onClick={() => void (canNativeExport ? onExport() : onWebExport())}
               disabled={exportState?.status === "running"}
-              style={{
-                background: tokens.color.accent,
-                color: "#141414",
-                fontWeight: 600,
-                borderRadius: tokens.radius.sm,
-                padding: "6px 14px",
-                cursor: "pointer",
-                fontSize: 13,
-                border: "none",
-              }}
               title={canNativeExport ? "原生管线 · 10-bit 保真" : "浏览器编码 · 8-bit"}
             >
               {exportState?.status === "running"
@@ -342,20 +363,12 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
                 : canNativeExport
                   ? "导出 10-bit"
                   : "导出"}
-            </button>
+            </Button>
           )}
-          <label
-            style={{
-              background: canExport ? tokens.color.surfaceRaised : tokens.color.accent,
-              color: canExport ? tokens.color.text : "#141414",
-              fontWeight: 600,
-              borderRadius: tokens.radius.sm,
-              padding: "6px 14px",
-              cursor: "pointer",
-              fontSize: 13,
-            }}
-          >
-            打开视频
+          <label style={{ cursor: "pointer" }}>
+            <Button as="span" variant={canExport ? "secondary" : "primary"}>
+              打开视频
+            </Button>
             <input type="file" accept="video/mp4,video/quicktime" hidden onChange={onPickFile} />
           </label>
         </header>
@@ -380,6 +393,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
               aspectRatio: "16/9",
               background: "#000",
               borderRadius: tokens.radius.md,
+              boxShadow: tokens.shadow.lg,
             }}
           />
         </div>
@@ -387,10 +401,11 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
         {/* scopes strip */}
         {showScopes && (
           <div
+            className="osmo-fade-in"
             style={{
               display: "flex",
               gap: 12,
-              padding: "8px 16px 0",
+              padding: "8px 18px 0",
               alignItems: "flex-end",
             }}
           >
@@ -414,26 +429,35 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
-            padding: "10px 16px",
+            gap: 10,
+            padding: "10px 18px",
             borderTop: `1px solid ${tokens.color.border}`,
+            background: tokens.color.surface,
           }}
         >
-          <button onClick={() => (playing ? engine.pause() : engine.play())} style={transportBtn}>
-            {playing ? "⏸" : "▶"}
-          </button>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => (playing ? engine.pause() : engine.play())}
+            style={{ background: tokens.color.surfaceRaised, border: `1px solid ${tokens.color.border}` }}
+          >
+            {playing ? <PauseIcon size={15} /> : <PlayIcon size={15} />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            active={showScopes}
             onClick={() => setShowScopes(!showScopes)}
-            style={{ ...transportBtn, color: showScopes ? tokens.color.accent : tokens.color.textDim }}
             title="示波器"
           >
-            📊
-          </button>
-          <button onClick={engine.stepForward} style={transportBtn} title="逐帧 →">
-            ⏭
-          </button>
+            <ScopesIcon size={16} />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={engine.stepForward} title="逐帧 →">
+            <StepForwardIcon size={16} />
+          </Button>
           <input
             type="range"
+            className="osmo-slider"
             min={0}
             max={Math.max(durationUs, 1)}
             value={dragUs ?? positionUs}
@@ -454,17 +478,42 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
                 setDragUs(null);
               }
             }}
-            style={{ flex: 1, accentColor: tokens.color.accent }}
+            style={{
+              flex: 1,
+              height: 3,
+              appearance: "none",
+              borderRadius: 2,
+              outline: "none",
+              cursor: "pointer",
+              background: `linear-gradient(to right, ${tokens.color.accent} 0%, ${tokens.color.accent} ${
+                (Math.max(dragUs ?? positionUs, 0) / Math.max(durationUs, 1)) * 100
+              }%, ${tokens.color.border} 0%)`,
+            }}
           />
-          <span style={{ fontSize: 11, fontFamily: tokens.font.mono, color: tokens.color.textDim }}>
+          <span
+            style={{
+              fontSize: 11,
+              fontFamily: tokens.font.mono,
+              color: tokens.color.textDim,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
             {fmtUs(dragUs ?? positionUs)} / {fmtUs(durationUs)}
           </span>
-          <span style={{ fontSize: 11, fontFamily: tokens.font.mono, color: tokens.color.textDim }}>
+          <span
+            style={{
+              fontSize: 11,
+              fontFamily: tokens.font.mono,
+              color: tokens.color.textFaint,
+              fontVariantNumeric: "tabular-nums",
+              minWidth: 38,
+            }}
+          >
             {stats ? `${stats.presentedFps}fps` : ""}
           </span>
         </div>
         {engine.error && (
-          <div style={{ color: tokens.color.bad, padding: "4px 16px", fontSize: 12 }}>{engine.error}</div>
+          <div style={{ color: tokens.color.bad, padding: "6px 18px", fontSize: 12 }}>{engine.error}</div>
         )}
       </div>
 
@@ -480,38 +529,32 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
       >
         <div
           style={{
-            padding: "10px 12px",
+            padding: "12px 14px",
             fontSize: 13,
             fontWeight: 700,
+            letterSpacing: 0.2,
             borderBottom: `1px solid ${tokens.color.border}`,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: 8,
           }}
         >
-          调色
-          <span style={{ display: "flex", gap: 4 }}>
-            <button onClick={undo} title="撤销 ⌘Z" style={historyBtn}>
-              ↶
-            </button>
-            <button onClick={redo} title="重做 ⇧⌘Z" style={historyBtn}>
-              ↷
-            </button>
-          </span>
-          <button
+          <span style={{ flex: 1 }}>调色</span>
+          <Button variant="ghost" size="icon" onClick={undo} title="撤销 ⌘Z" style={{ width: 26, height: 26 }}>
+            <UndoIcon size={14} />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={redo} title="重做 ⇧⌘Z" style={{ width: 26, height: 26 }}>
+            <RedoIcon size={14} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => updateGrade({ ...defaultGrade(grade.input.profile) })}
-            style={{
-              background: "none",
-              border: `1px solid ${tokens.color.border}`,
-              color: tokens.color.textDim,
-              borderRadius: 999,
-              fontSize: 11,
-              padding: "2px 10px",
-              cursor: "pointer",
-            }}
+            style={{ borderRadius: tokens.radius.pill, border: `1px solid ${tokens.color.border}` }}
           >
             全部重置
-          </button>
+          </Button>
         </div>
         <AdjustPanel
           grade={grade}
@@ -523,26 +566,40 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
 
       {exportState && (
         <div
+          className="osmo-fade-in"
           style={{
             position: "fixed",
             right: 316,
             bottom: 16,
             width: 300,
             background: tokens.color.surfaceRaised,
-            border: `1px solid ${tokens.color.border}`,
+            border: `1px solid ${tokens.color.borderStrong}`,
             borderRadius: tokens.radius.md,
-            padding: 14,
+            padding: 16,
             fontSize: 12,
-            boxShadow: "0 8px 30px rgba(0,0,0,0.5)",
+            boxShadow: tokens.shadow.lg,
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <strong>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <strong
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                color:
+                  exportState.status === "done"
+                    ? tokens.color.good
+                    : exportState.status === "error"
+                      ? tokens.color.bad
+                      : tokens.color.text,
+              }}
+            >
+              {exportState.status === "done" && <CheckIcon size={14} />}
               {exportState.status === "running"
                 ? "导出中"
                 : exportState.status === "done"
-                  ? "✓ 导出完成"
-                  : "✗ 导出失败"}
+                  ? "导出完成"
+                  : "导出失败"}
             </strong>
             <button
               onClick={() => {
@@ -552,14 +609,22 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
                 }
                 setExportState(null);
               }}
+              className="osmo-btn"
+              data-variant="ghost"
               style={{
                 background: "none",
                 border: "none",
                 color: tokens.color.textDim,
                 cursor: "pointer",
+                fontSize: 11,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "3px 6px",
+                borderRadius: tokens.radius.xs,
               }}
             >
-              {exportState.status === "running" ? "取消" : "关闭"}
+              {exportState.status === "running" ? "取消" : <CloseIcon size={13} />}
             </button>
           </div>
           {exportState.status === "error" ? (
@@ -604,44 +669,22 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
   );
 }
 
-const historyBtn: React.CSSProperties = {
-  background: "none",
-  border: `1px solid ${tokens.color.border}`,
-  color: tokens.color.textDim,
-  borderRadius: 6,
-  fontSize: 12,
-  width: 26,
-  height: 22,
-  cursor: "pointer",
-  lineHeight: 1,
-};
-
 const scopeFigure: React.CSSProperties = { margin: 0 };
 
 const scopeCanvas: React.CSSProperties = {
   width: 200,
   height: 90,
   background: "#000",
-  borderRadius: 6,
-  border: `1px solid ${tokens.color.border}`,
+  borderRadius: tokens.radius.sm,
+  boxShadow: `inset 0 0 0 1px ${tokens.color.border}`,
   display: "block",
 };
 
 const scopeCaption: React.CSSProperties = {
   fontSize: 10,
-  color: tokens.color.textDim,
-  marginTop: 2,
-};
-
-const transportBtn: React.CSSProperties = {
-  background: tokens.color.surfaceRaised,
-  color: tokens.color.text,
-  border: `1px solid ${tokens.color.border}`,
-  borderRadius: tokens.radius.sm,
-  width: 36,
-  height: 30,
-  cursor: "pointer",
-  fontSize: 14,
+  color: tokens.color.textFaint,
+  marginTop: 4,
+  letterSpacing: 0.2,
 };
 
 function fmtUs(us: number): string {

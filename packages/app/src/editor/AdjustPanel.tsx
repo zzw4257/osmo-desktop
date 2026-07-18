@@ -2,7 +2,7 @@ import type { Grade, HslBand } from "@osmo/color-engine";
 import { HSL_BANDS, bakeCurveLut, defaultOps } from "@osmo/color-engine";
 import { FILTER_PRESETS, applyPreset } from "@osmo/presets";
 import type { ColorProfile } from "@osmo/shared";
-import { ColorWheel, CurveEditor, Section, Slider, tokens } from "@osmo/ui";
+import { Button, ColorWheel, CurveEditor, DownloadIcon, Section, Slider, tokens } from "@osmo/ui";
 import { useState } from "react";
 
 export interface AdjustPanelProps {
@@ -68,6 +68,7 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
       <Section title="色彩还原" defaultOpen badge={grade.input.profile !== "rec709" ? grade.input.profile.toUpperCase() : undefined}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <select
+            className="osmo-select"
             value={grade.input.profile}
             onChange={(e) => patchInput({ profile: e.target.value as ColorProfile })}
             style={selectStyle}
@@ -79,7 +80,7 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
             ))}
           </select>
           {(grade.input.profile === "dlog-m" || grade.input.profile === "dlog2") && (
-            <label style={lutButtonStyle}>
+            <Button as="span" icon={<DownloadIcon size={14} />} style={lutButtonStyle}>
               导入官方 .cube 还原 LUT
               <input
                 type="file"
@@ -93,7 +94,7 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
                   }
                 }}
               />
-            </label>
+            </Button>
           )}
           <Slider
             label="还原强度"
@@ -121,6 +122,7 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
             return (
               <button
                 key={p.id}
+                className="osmo-chip"
                 onClick={() =>
                   onChange({
                     ...grade,
@@ -133,7 +135,7 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
                   padding: "5px 12px",
                   borderColor: active ? tokens.color.accent : tokens.color.border,
                   color: active ? tokens.color.accent : tokens.color.textDim,
-                  background: active ? "rgba(255,106,0,0.10)" : "transparent",
+                  background: active ? tokens.color.accentWash : "transparent",
                 }}
               >
                 {p.name}
@@ -185,11 +187,12 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
       <Section title="曲线" onReset={() => patch({ curves: d.curves })}>
         <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
           {CURVE_TABS.map((t) => (
-            <button key={t.key} onClick={() => setCurveTab(t.key)}
+            <button key={t.key} className="osmo-chip" onClick={() => setCurveTab(t.key)}
               style={{
                 ...chipStyle,
                 borderColor: curveTab === t.key ? t.accent : tokens.color.border,
                 color: curveTab === t.key ? t.accent : tokens.color.textDim,
+                background: curveTab === t.key ? `${t.accent}1a` : "transparent",
               }}>
               {t.label}
             </button>
@@ -214,14 +217,17 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
       <Section title="HSL 分区" onReset={() => patch({ hsl: d.hsl })}>
         <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
           {HSL_BANDS.map((b) => (
-            <button key={b} onClick={() => setHslBand(b)} title={BAND_LABELS[b]}
+            <button key={b} className="osmo-band" onClick={() => setHslBand(b)} title={BAND_LABELS[b]}
               style={{
                 width: 22,
                 height: 22,
                 borderRadius: "50%",
                 cursor: "pointer",
                 background: BAND_COLORS[b],
-                border: hslBand === b ? `2px solid ${tokens.color.text}` : "2px solid transparent",
+                boxShadow: hslBand === b
+                  ? `0 0 0 2px ${tokens.color.bg}, 0 0 0 4px ${tokens.color.text}`
+                  : "none",
+                border: "none",
                 opacity: hslBand === b ? 1 : 0.55,
               }} />
           ))}
@@ -242,7 +248,7 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
       </Section>
 
       <Section title="创意 LUT">
-        <label style={lutButtonStyle}>
+        <Button as="span" icon={<DownloadIcon size={14} />} style={lutButtonStyle}>
           {ops.creativeLut ? `已加载 · 点击更换` : "导入 .cube LUT"}
           <input type="file" accept=".cube" hidden
             onChange={(e) => {
@@ -252,15 +258,15 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
                 patch({ creativeLut: { hash: f.name, strength: ops.creativeLut?.strength ?? 1 } });
               }
             }} />
-        </label>
+        </Button>
         {ops.creativeLut && (
           <>
             <Slider label="LUT 强度" value={Math.round(ops.creativeLut.strength * 100)} min={0} max={100}
               defaultValue={100}
               onChange={(v) => patch({ creativeLut: { ...ops.creativeLut!, strength: v / 100 } })} />
-            <button style={{ ...chipStyle, marginTop: 4 }} onClick={() => patch({ creativeLut: null })}>
+            <Button variant="danger" size="sm" style={{ marginTop: 4 }} onClick={() => patch({ creativeLut: null })}>
               移除 LUT
-            </button>
+            </Button>
           </>
         )}
       </Section>
@@ -305,7 +311,7 @@ const selectStyle: React.CSSProperties = {
   color: tokens.color.text,
   border: `1px solid ${tokens.color.border}`,
   borderRadius: tokens.radius.sm,
-  padding: "6px 8px",
+  padding: "7px 9px",
   fontSize: 12,
 };
 
@@ -320,13 +326,13 @@ const chipStyle: React.CSSProperties = {
 };
 
 const lutButtonStyle: React.CSSProperties = {
-  display: "block",
-  textAlign: "center",
+  width: "100%",
+  height: "auto",
+  justifyContent: "center",
   background: tokens.color.surfaceRaised,
   border: `1px dashed ${tokens.color.border}`,
   color: tokens.color.textDim,
-  borderRadius: tokens.radius.sm,
-  padding: "8px",
+  padding: "9px",
   fontSize: 12,
-  cursor: "pointer",
+  fontWeight: 500,
 };

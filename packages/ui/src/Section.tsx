@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { ChevronRightIcon, ResetIcon } from "./icons";
 import { tokens } from "./tokens";
 
 export interface SectionProps {
@@ -14,39 +15,43 @@ export interface SectionProps {
 export function Section({ title, defaultOpen = false, badge, onReset, children }: SectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div
-      style={{
-        borderBottom: `1px solid ${tokens.color.border}`,
-        background: tokens.color.surface,
-      }}
-    >
+    <div style={{ borderBottom: `1px solid ${tokens.color.border}` }}>
       <div
         onClick={() => setOpen(!open)}
         style={{
           display: "flex",
           alignItems: "center",
           gap: 8,
-          padding: "10px 12px",
+          padding: "11px 14px",
           cursor: "pointer",
           userSelect: "none",
-          fontSize: 13,
+          fontSize: 12.5,
           fontWeight: 600,
+          letterSpacing: 0.2,
         }}
       >
-        <span
+        <ChevronRightIcon
+          size={11}
+          color={tokens.color.textFaint}
           style={{
-            display: "inline-block",
             transform: open ? "rotate(90deg)" : "none",
-            transition: "transform 0.15s",
-            color: tokens.color.textDim,
-            fontSize: 10,
+            transition: `transform 0.18s ${tokens.ease.out}`,
           }}
-        >
-          ▶
-        </span>
+        />
         <span style={{ flex: 1 }}>{title}</span>
         {badge && (
-          <span style={{ color: tokens.color.accent, fontSize: 10, fontWeight: 400 }}>{badge}</span>
+          <span
+            style={{
+              color: tokens.color.accent,
+              fontSize: 10,
+              fontWeight: 500,
+              background: tokens.color.accentWash,
+              borderRadius: tokens.radius.pill,
+              padding: "2px 8px",
+            }}
+          >
+            {badge}
+          </span>
         )}
         {onReset && open && (
           <button
@@ -54,21 +59,29 @@ export function Section({ title, defaultOpen = false, badge, onReset, children }
               e.stopPropagation();
               onReset();
             }}
+            className="osmo-btn"
+            data-variant="ghost"
             style={{
               background: "none",
               border: "none",
-              color: tokens.color.textDim,
-              fontSize: 11,
+              color: tokens.color.textFaint,
               cursor: "pointer",
-              padding: 0,
+              padding: 4,
+              display: "grid",
+              placeItems: "center",
+              borderRadius: tokens.radius.xs,
             }}
             title="重置本区"
           >
-            ⟲
+            <ResetIcon size={13} />
           </button>
         )}
       </div>
-      {open && <div style={{ padding: "2px 12px 12px" }}>{children}</div>}
+      {open && (
+        <div className="osmo-fade-in" style={{ padding: "2px 14px 14px" }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }

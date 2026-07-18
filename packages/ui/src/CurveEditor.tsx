@@ -104,6 +104,8 @@ export function CurveEditor({
   );
 
   const midY = identity === "zero" ? height / 2 : undefined;
+  const fillId = useMemo(() => `curve-fill-${Math.random().toString(36).slice(2)}`, []);
+  const areaPath = `${path} L${width},${height} L0,${height} Z`;
 
   return (
     <svg
@@ -113,7 +115,7 @@ export function CurveEditor({
       style={{
         background: tokens.color.bg,
         borderRadius: tokens.radius.sm,
-        border: `1px solid ${tokens.color.border}`,
+        boxShadow: `inset 0 0 0 1px ${tokens.color.border}`,
         cursor: "crosshair",
         touchAction: "none",
         display: "block",
@@ -123,6 +125,12 @@ export function CurveEditor({
       onPointerUp={onPointerUp}
       onDoubleClick={onDoubleClick}
     >
+      <defs>
+        <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={accent} stopOpacity={0.22} />
+          <stop offset="100%" stopColor={accent} stopOpacity={0} />
+        </linearGradient>
+      </defs>
       {/* grid */}
       {[0.25, 0.5, 0.75].map((g) => (
         <g key={g} stroke={tokens.color.border} strokeWidth={0.5}>
@@ -131,22 +139,25 @@ export function CurveEditor({
         </g>
       ))}
       {midY === undefined ? (
-        <line x1={0} y1={height} x2={width} y2={0} stroke={tokens.color.border} strokeWidth={1} />
+        <line x1={0} y1={height} x2={width} y2={0} stroke={tokens.color.border} strokeWidth={1} strokeDasharray="2 3" />
       ) : (
-        <line x1={0} y1={midY} x2={width} y2={midY} stroke={tokens.color.border} strokeWidth={1} />
+        <line x1={0} y1={midY} x2={width} y2={midY} stroke={tokens.color.border} strokeWidth={1} strokeDasharray="2 3" />
       )}
-      <path d={path} stroke={accent} strokeWidth={1.5} fill="none" />
+      <path d={areaPath} fill={`url(#${fillId})`} stroke="none" />
+      <path d={path} stroke={accent} strokeWidth={1.75} fill="none" strokeLinecap="round" />
       {points.map(([x, y], i) => {
         const yNorm = identity === "zero" ? y * 0.5 + 0.5 : y;
+        const isDrag = i === dragIndex;
         return (
           <circle
             key={i}
             cx={x * width}
             cy={height - clamp01(yNorm) * height}
-            r={4}
-            fill={i === dragIndex ? accent : tokens.color.surfaceRaised}
+            r={isDrag ? 5.5 : 4}
+            fill={isDrag ? accent : tokens.color.bg}
             stroke={accent}
-            strokeWidth={1.5}
+            strokeWidth={1.75}
+            style={{ transition: `r 0.1s ${tokens.ease.out}` }}
           />
         );
       })}

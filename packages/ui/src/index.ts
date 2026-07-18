@@ -3,3 +3,6 @@ export * from "./Slider";
 export * from "./Section";
 export * from "./CurveEditor";
 export * from "./ColorWheel";
+export * from "./Button";
+export * from "./GlobalStyle";
+export * from "./icons";

@@ -26,18 +26,20 @@ export function Slider({
   const id = useId();
   const reset = useCallback(() => onChange(defaultValue), [onChange, defaultValue]);
   const pct = ((value - min) / (max - min)) * 100;
+  const touched = value !== defaultValue;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "3px 0" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "4px 0" }}>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-        <label htmlFor={id} style={{ color: tokens.color.textDim }}>
+        <label htmlFor={id} style={{ color: touched ? tokens.color.text : tokens.color.textDim }}>
           {label}
         </label>
         <span
           style={{
-            color: value === defaultValue ? tokens.color.textDim : tokens.color.accent,
+            color: touched ? tokens.color.accent : tokens.color.textFaint,
             fontFamily: tokens.font.mono,
             fontSize: 11,
+            fontVariantNumeric: "tabular-nums",
           }}
         >
           {format ? format(value) : formatDefault(value, step)}
@@ -54,7 +56,7 @@ export function Slider({
         onDoubleClick={reset}
         style={{
           width: "100%",
-          height: 4,
+          height: 3,
           appearance: "none",
           borderRadius: 2,
           outline: "none",

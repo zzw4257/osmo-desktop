@@ -9,7 +9,15 @@ import {
   onDjiVolumesChanged,
   pickFolderNative,
 } from "@osmo/platform";
-import { tokens } from "@osmo/ui";
+import {
+  Button,
+  CameraDeviceIcon,
+  CloseIcon,
+  FilmIcon,
+  FolderIcon,
+  TrashIcon,
+  tokens,
+} from "@osmo/ui";
 import { useCallback, useEffect, useState } from "react";
 import { IdbGradeStore } from "../editor/gradeStore";
 import {
@@ -220,12 +228,13 @@ export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps)
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 12,
-          padding: "12px 20px",
+          gap: 14,
+          padding: "13px 22px",
           borderBottom: `1px solid ${tokens.color.border}`,
+          background: tokens.color.surface,
         }}
       >
-        <h1 style={{ color: tokens.color.accent, fontSize: 17, margin: 0, fontWeight: 700 }}>
+        <h1 style={{ color: tokens.color.accent, fontSize: 16, margin: 0, fontWeight: 700, letterSpacing: 0.2 }}>
           OSMO Desktop
         </h1>
         <span style={{ fontSize: 12, color: tokens.color.textDim }}>
@@ -233,39 +242,30 @@ export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps)
           {clips.length > 0 ? ` · ${clips.length} 个视频` : ""}
         </span>
         <div style={{ flex: 1 }} />
-        <button
-          onClick={onOpenMonitor}
-          style={{
-            ...primaryBtn,
-            background: tokens.color.surfaceRaised,
-            color: tokens.color.text,
-            border: `1px solid ${tokens.color.border}`,
-          }}
-          title="相机网络摄像头模式实时监看（带调色与示波器）"
-        >
-          📹 监看
-        </button>
+        <Button variant="secondary" onClick={onOpenMonitor} icon={<CameraDeviceIcon size={15} />}
+          title="相机网络摄像头模式实时监看（带调色与示波器）">
+          监看
+        </Button>
         {selected.size > 0 && (
           <>
-            <button onClick={() => void importSelected()} disabled={busy} style={primaryBtn}>
+            <Button variant="primary" onClick={() => void importSelected()} disabled={busy}>
               导入素材库（{selected.size}）
-            </button>
-            <button
-              onClick={() => void deleteSelected()}
-              disabled={busy}
-              style={{ ...primaryBtn, background: tokens.color.bad, color: "#fff" }}
-            >
+            </Button>
+            <Button variant="danger" onClick={() => void deleteSelected()} disabled={busy}
+              icon={<TrashIcon size={14} />}>
               删除所选（{selected.size}）
-            </button>
+            </Button>
           </>
         )}
         {supportsPicker ? (
-          <button onClick={pickFolder} style={primaryBtn} disabled={busy}>
+          <Button variant="primary" onClick={pickFolder} disabled={busy} icon={<FolderIcon size={14} />}>
             {busy ? "扫描中…" : "关联本地文件夹"}
-          </button>
+          </Button>
         ) : (
-          <label style={primaryBtn}>
-            关联本地文件夹
+          <label style={{ cursor: "pointer" }}>
+            <Button as="span" variant="primary" icon={<FolderIcon size={14} />}>
+              关联本地文件夹
+            </Button>
             <input
               type="file"
               // @ts-expect-error non-standard but universally supported
@@ -280,45 +280,45 @@ export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps)
 
       {volumes.length > 0 && (
         <div
+          className="osmo-fade-in"
           style={{
             display: "flex",
             alignItems: "center",
             gap: 12,
-            padding: "10px 20px",
-            background: "rgba(255,106,0,0.08)",
+            padding: "10px 22px",
+            background: tokens.color.accentWash,
             borderBottom: `1px solid ${tokens.color.border}`,
             fontSize: 13,
           }}
         >
-          <span>📷</span>
+          <CameraDeviceIcon size={16} color={tokens.color.accent} />
           <span>
             检测到 DJI 设备：<strong>{volumes.map((v) => v.name).join("、")}</strong>
           </span>
           {volumes.map((v) => (
-            <button key={v.path} onClick={() => void browseVolume(v)} style={smallBtn} disabled={busy}>
+            <Button key={v.path} variant="primary" size="sm" onClick={() => void browseVolume(v)} disabled={busy}>
               浏览 {v.name}
-            </button>
+            </Button>
           ))}
         </div>
       )}
       {deleteReport && (
         <div
+          className="osmo-fade-in"
           style={{
-            padding: "8px 20px",
+            padding: "9px 22px",
             fontSize: 12,
             color: tokens.color.textDim,
             borderBottom: `1px solid ${tokens.color.border}`,
             display: "flex",
             justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
           <span>{deleteReport}</span>
-          <button
-            onClick={() => setDeleteReport(null)}
-            style={{ background: "none", border: "none", color: tokens.color.textDim, cursor: "pointer" }}
-          >
-            ✕
-          </button>
+          <Button variant="ghost" size="icon" onClick={() => setDeleteReport(null)} style={{ width: 24, height: 24 }}>
+            <CloseIcon size={13} />
+          </Button>
         </div>
       )}
 
@@ -330,12 +330,14 @@ export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps)
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: 8,
+            gap: 10,
             color: tokens.color.textDim,
           }}
         >
-          <span style={{ fontSize: 40 }}>🎞</span>
-          <p style={{ fontSize: 14, margin: 0 }}>关联包含 DJI 素材的本地文件夹（如 SD 卡的 DCIM）</p>
+          <FilmIcon size={40} color={tokens.color.textFaint} />
+          <p style={{ fontSize: 14, margin: 0, color: tokens.color.text }}>
+            关联包含 DJI 素材的本地文件夹（如 SD 卡的 DCIM）
+          </p>
           <p style={{ fontSize: 12, margin: 0, opacity: 0.7 }}>
             识别 DJI 命名的视频并自动配对 .LRF 代理用于快速预览
           </p>
@@ -399,6 +401,7 @@ function ClipCard({
   return (
     <div
       onClick={onOpen}
+      className="osmo-card"
       style={{
         background: tokens.color.surface,
         borderRadius: tokens.radius.md,
@@ -418,51 +421,52 @@ function ClipCard({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: tokens.color.textDim,
-              fontSize: 20,
+              color: tokens.color.textFaint,
             }}
           >
-            ▶
+            <FilmIcon size={22} />
           </div>
         )}
-        <div style={{ position: "absolute", top: 6, left: 6, display: "flex", gap: 4 }}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(180deg, rgba(0,0,0,0.35) 0%, transparent 30%)",
+            pointerEvents: "none",
+          }}
+        />
+        <div style={{ position: "absolute", top: 7, left: 7, display: "flex", gap: 4 }}>
           {clip.isDji && <Badge text="DJI" color={tokens.color.accent} />}
           {clip.hasLrf && <Badge text="LRF" color="#5cb2ff" />}
           {graded && <Badge text="已调色" color={tokens.color.good} />}
-          {exported && <Badge text="已导出" color="#b78aff" />}
+          {exported && <Badge text="已导出" color="#c894ff" />}
         </div>
         {selectable && (
           <input
             type="checkbox"
+            className="osmo-check"
             checked={selected}
             onClick={(e) => e.stopPropagation()}
             onChange={onToggleSelect}
             title="选择以删除"
-            style={{
-              position: "absolute",
-              top: 6,
-              right: 6,
-              width: 16,
-              height: 16,
-              accentColor: tokens.color.bad,
-              cursor: "pointer",
-            }}
+            style={{ position: "absolute", top: 7, right: 7 }}
           />
         )}
       </div>
-      <div style={{ padding: "8px 10px" }}>
+      <div style={{ padding: "9px 11px" }}>
         <div
           style={{
             fontSize: 12,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
+            fontWeight: 500,
           }}
           title={clip.name}
         >
           {clip.name}
         </div>
-        <div style={{ fontSize: 10, color: tokens.color.textDim, marginTop: 2 }}>
+        <div style={{ fontSize: 10.5, color: tokens.color.textFaint, marginTop: 3 }}>
           {clip.shotAt ? new Date(clip.shotAt).toLocaleString("zh-CN") : "—"} ·{" "}
           {(clip.size / 1e6).toFixed(0)}MB
         </div>
@@ -475,38 +479,17 @@ function Badge({ text, color }: { text: string; color: string }) {
   return (
     <span
       style={{
-        background: "rgba(0,0,0,0.65)",
+        background: "rgba(10,10,11,0.72)",
+        backdropFilter: "blur(4px)",
         color,
         fontSize: 9,
         fontWeight: 700,
         borderRadius: 4,
-        padding: "2px 5px",
-        letterSpacing: 0.5,
+        padding: "2.5px 6px",
+        letterSpacing: 0.4,
       }}
     >
       {text}
     </span>
   );
 }
-
-const smallBtn: React.CSSProperties = {
-  background: tokens.color.accent,
-  color: "#141414",
-  fontWeight: 600,
-  borderRadius: 6,
-  padding: "3px 10px",
-  cursor: "pointer",
-  fontSize: 12,
-  border: "none",
-};
-
-const primaryBtn: React.CSSProperties = {
-  background: tokens.color.accent,
-  color: "#141414",
-  fontWeight: 600,
-  borderRadius: tokens.radius.sm,
-  padding: "7px 16px",
-  cursor: "pointer",
-  fontSize: 13,
-  border: "none",
-};
