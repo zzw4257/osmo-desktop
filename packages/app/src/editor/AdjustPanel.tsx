@@ -130,13 +130,18 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
                     ops: applyPreset(ops, p),
                   })
                 }
-                style={{
-                  ...chipStyle,
-                  padding: "5px 12px",
-                  borderColor: active ? tokens.color.accent : tokens.color.border,
-                  color: active ? tokens.color.accent : tokens.color.textDim,
-                  background: active ? tokens.color.accentWash : "transparent",
-                }}
+                style={
+                  active
+                    ? {
+                        ...chipStyle,
+                        padding: "5px 12px",
+                        borderColor: tokens.color.text,
+                        color: tokens.color.onLight,
+                        background: tokens.color.text,
+                        fontWeight: 700,
+                      }
+                    : { ...chipStyle, padding: "5px 12px" }
+                }
               >
                 {p.name}
               </button>
@@ -188,12 +193,11 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
         <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
           {CURVE_TABS.map((t) => (
             <button key={t.key} className="osmo-chip" onClick={() => setCurveTab(t.key)}
-              style={{
-                ...chipStyle,
-                borderColor: curveTab === t.key ? t.accent : tokens.color.border,
-                color: curveTab === t.key ? t.accent : tokens.color.textDim,
-                background: curveTab === t.key ? `${t.accent}1a` : "transparent",
-              }}>
+              style={
+                curveTab === t.key
+                  ? { ...chipStyle, borderColor: t.accent, color: t.accent, background: `${t.accent}1a`, fontWeight: 700 }
+                  : chipStyle
+              }>
               {t.label}
             </button>
           ))}
@@ -315,10 +319,9 @@ const selectStyle: React.CSSProperties = {
   fontSize: 12,
 };
 
+/** Border/color/background for the resting state live in .osmo-chip so :hover can take effect —
+ * an inline style on the element would always win over the stylesheet rule otherwise. */
 const chipStyle: React.CSSProperties = {
-  background: "transparent",
-  border: `1px solid ${tokens.color.border}`,
-  color: tokens.color.textDim,
   borderRadius: 999,
   padding: "3px 10px",
   fontSize: 11,

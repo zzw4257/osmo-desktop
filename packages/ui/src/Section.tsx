@@ -62,14 +62,14 @@ export function Section({ title, defaultOpen = false, badge, onReset, children }
             className="osmo-btn"
             data-variant="ghost"
             style={{
-              background: "none",
-              border: "none",
               color: tokens.color.textFaint,
               cursor: "pointer",
               padding: 4,
               display: "grid",
               placeItems: "center",
               borderRadius: tokens.radius.xs,
+              borderWidth: 1,
+              borderStyle: "solid",
             }}
             title="重置本区"
           >

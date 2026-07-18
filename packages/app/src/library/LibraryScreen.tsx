@@ -354,7 +354,7 @@ export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps)
             alignContent: "start",
           }}
         >
-          {clips.map((clip) => (
+          {clips.map((clip, i) => (
             <ClipCard
               key={clip.key}
               clip={clip}
@@ -364,6 +364,7 @@ export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps)
               selectable={clip.srcPath !== null && isTauri()}
               onToggleSelect={() => toggleSelect(clip.key)}
               onOpen={() => onOpenClip(clip)}
+              staggerMs={Math.min(i, 12) * 30}
             />
           ))}
         </div>
@@ -380,6 +381,7 @@ function ClipCard({
   selectable,
   onToggleSelect,
   onOpen,
+  staggerMs,
 }: {
   clip: LibraryClip;
   graded: boolean;
@@ -388,6 +390,7 @@ function ClipCard({
   selectable: boolean;
   onToggleSelect: () => void;
   onOpen: () => void;
+  staggerMs: number;
 }) {
   const [thumb, setThumb] = useState<string | null>(null);
   useEffect(() => {
@@ -401,13 +404,15 @@ function ClipCard({
   return (
     <div
       onClick={onOpen}
-      className="osmo-card"
+      className="osmo-card osmo-fade-in"
       style={{
         background: tokens.color.surface,
         borderRadius: tokens.radius.md,
         overflow: "hidden",
         cursor: "pointer",
         border: `1px solid ${tokens.color.border}`,
+        animationDelay: `${staggerMs}ms`,
+        animationFillMode: "backwards",
       }}
     >
       <div style={{ aspectRatio: "16/9", background: "#000", position: "relative" }}>

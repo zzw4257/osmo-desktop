@@ -30,7 +30,7 @@ export function Button({
   className,
   ...rest
 }: ButtonProps) {
-  const computedStyle = { ...baseStyle(size), ...variantStyle(variant, active), ...style };
+  const computedStyle = { ...baseStyle(size), ...sharedStyle, ...style };
   const computedClassName = `osmo-btn ${className ?? ""}`;
   const dataVariant = active ? "active" : variant;
 
@@ -96,39 +96,16 @@ function baseStyle(size: ButtonSize): React.CSSProperties {
   }
 }
 
-function variantStyle(variant: ButtonVariant, active: boolean): React.CSSProperties {
-  const shared: React.CSSProperties = {
-    fontWeight: 600,
-    cursor: "pointer",
-    border: "1px solid transparent",
-    whiteSpace: "nowrap",
-  };
-  if (active) {
-    return {
-      ...shared,
-      background: tokens.color.accentWash,
-      color: tokens.color.accent,
-      borderColor: "rgba(255,122,26,0.4)",
-    };
-  }
-  switch (variant) {
-    case "primary":
-      return { ...shared, background: tokens.color.accent, color: "#14140f" };
-    case "danger":
-      return { ...shared, background: tokens.color.bad, color: "#fff" };
-    case "ghost":
-      return {
-        ...shared,
-        background: "transparent",
-        color: tokens.color.textDim,
-        border: "1px solid transparent",
-      };
-    default:
-      return {
-        ...shared,
-        background: tokens.color.surfaceRaised,
-        color: tokens.color.text,
-        borderColor: tokens.color.border,
-      };
-  }
-}
+/**
+ * Colors/background/border-color are intentionally NOT set here — they live in
+ * GlobalStyle keyed off `[data-variant]` so :hover can actually take effect.
+ * An inline style always wins over a stylesheet rule, so setting them here
+ * would silently kill every hover transition (this bit the app once already).
+ */
+const sharedStyle: React.CSSProperties = {
+  fontWeight: 600,
+  cursor: "pointer",
+  borderWidth: 1,
+  borderStyle: "solid",
+  whiteSpace: "nowrap",
+};

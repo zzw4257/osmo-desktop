@@ -436,12 +436,13 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
           }}
         >
           <Button
-            variant="ghost"
+            variant="primary"
             size="icon"
             onClick={() => (playing ? engine.pause() : engine.play())}
-            style={{ background: tokens.color.surfaceRaised, border: `1px solid ${tokens.color.border}` }}
+            title={playing ? "暂停 · 空格" : "播放 · 空格"}
+            style={{ width: 40, height: 40, borderRadius: tokens.radius.pill, boxShadow: tokens.shadow.md }}
           >
-            {playing ? <PauseIcon size={15} /> : <PlayIcon size={15} />}
+            {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} style={{ marginLeft: 1 }} />}
           </Button>
           <Button
             variant="ghost"
@@ -612,9 +613,6 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
               className="osmo-btn"
               data-variant="ghost"
               style={{
-                background: "none",
-                border: "none",
-                color: tokens.color.textDim,
                 cursor: "pointer",
                 fontSize: 11,
                 display: "flex",
@@ -622,6 +620,8 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
                 gap: 4,
                 padding: "3px 6px",
                 borderRadius: tokens.radius.xs,
+                borderWidth: 1,
+                borderStyle: "solid",
               }}
             >
               {exportState.status === "running" ? "取消" : <CloseIcon size={13} />}

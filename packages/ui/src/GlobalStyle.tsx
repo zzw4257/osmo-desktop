@@ -12,7 +12,7 @@ export function GlobalStyle() {
       * { box-sizing: border-box; }
       body { margin: 0; }
 
-      ::selection { background: ${tokens.color.accent}; color: #14140f; }
+      ::selection { background: ${tokens.color.accent}; color: ${tokens.color.onLight}; }
 
       ::-webkit-scrollbar { width: 10px; height: 10px; }
       ::-webkit-scrollbar-track { background: transparent; }
@@ -82,7 +82,7 @@ export function GlobalStyle() {
         content: "";
         width: 4px;
         height: 8px;
-        border: solid #14140f;
+        border: solid ${tokens.color.onLight};
         border-width: 0 2px 2px 0;
         transform: rotate(45deg) translate(-1px, -1px);
       }
@@ -93,11 +93,26 @@ export function GlobalStyle() {
       }
       .osmo-btn:active { transform: scale(0.96); }
       .osmo-btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
-      .osmo-btn[data-variant="primary"]:hover { background: ${tokens.color.accentHover}; }
+
+      /* Every variant's resting look lives here (not inline) so :hover can win the cascade. */
+      .osmo-btn[data-variant="primary"], .osmo-btn[data-variant="active"] {
+        background: ${tokens.color.text}; color: ${tokens.color.onLight}; border-color: ${tokens.color.text};
+      }
+      .osmo-btn[data-variant="primary"]:hover, .osmo-btn[data-variant="active"]:hover {
+        background: #e4e4e6; border-color: #e4e4e6;
+      }
+      .osmo-btn[data-variant="secondary"] {
+        background: ${tokens.color.surfaceRaised}; color: ${tokens.color.text}; border-color: ${tokens.color.border};
+      }
       .osmo-btn[data-variant="secondary"]:hover { background: ${tokens.color.surfaceHover}; border-color: ${tokens.color.borderStrong}; }
+      .osmo-btn[data-variant="ghost"] {
+        background: transparent; color: ${tokens.color.textDim}; border-color: transparent;
+      }
       .osmo-btn[data-variant="ghost"]:hover { background: rgba(255,255,255,0.06); color: ${tokens.color.text}; }
+      .osmo-btn[data-variant="danger"] {
+        background: ${tokens.color.bad}; color: #fff; border-color: transparent;
+      }
       .osmo-btn[data-variant="danger"]:hover { background: #ff7169; }
-      .osmo-btn[data-variant="active"]:hover { background: rgba(255,122,26,0.18); }
 
       .osmo-card {
         transition: border-color 0.15s ${tokens.ease.out}, transform 0.15s ${tokens.ease.out},
@@ -118,6 +133,9 @@ export function GlobalStyle() {
       @keyframes osmo-spin { to { transform: rotate(360deg); } }
 
       .osmo-chip {
+        background: transparent;
+        border: 1px solid ${tokens.color.border};
+        color: ${tokens.color.textDim};
         transition: background 0.12s ${tokens.ease.out}, border-color 0.12s ${tokens.ease.out},
           color 0.12s ${tokens.ease.out}, transform 0.08s ${tokens.ease.out};
       }
@@ -129,6 +147,7 @@ export function GlobalStyle() {
           opacity 0.14s ${tokens.ease.out};
       }
       .osmo-band:hover { transform: scale(1.12); opacity: 1; }
+      .osmo-band:active { transform: scale(0.92); }
 
       select.osmo-select {
         transition: border-color 0.12s ${tokens.ease.out}, background 0.12s ${tokens.ease.out};

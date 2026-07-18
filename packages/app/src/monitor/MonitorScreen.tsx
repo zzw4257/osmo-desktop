@@ -302,8 +302,8 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
                     padding: "6px 14px",
                     fontSize: 12,
                     cursor: "pointer",
-                    background: source === s ? tokens.color.accent : "transparent",
-                    color: source === s ? "#14140f" : tokens.color.textDim,
+                    background: source === s ? tokens.color.text : "transparent",
+                    color: source === s ? tokens.color.onLight : tokens.color.textDim,
                     fontWeight: 600,
                   }}
                 >
