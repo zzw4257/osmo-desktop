@@ -77,7 +77,9 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
           position: "relative",
           cursor: "crosshair",
           touchAction: "none",
-          boxShadow: `inset 0 0 0 1px rgba(0,0,0,0.3), ${tokens.shadow.sm}`,
+          // Recessed dial, not a flat sticker: inner shadow reads as set into the
+          // panel, the soft outer shadow gives it a hair of lift off the surface.
+          boxShadow: `inset 0 1px 3px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(0,0,0,0.3), ${tokens.shadow.sm}`,
           // hue ring matching the math: red at +x (0°), green at 120°, blue at 240°
           background:
             "conic-gradient(from 90deg, #ff5252, #ff52ff, #5252ff, #52ffff, #52ff52, #ffff52, #ff5252)",
@@ -90,6 +92,18 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
             inset: 0,
             borderRadius: "50%",
             background: `radial-gradient(circle, ${tokens.color.surface} 32%, transparent 78%)`,
+          }}
+        />
+        {/* Specular highlight — a flat conic gradient reads as a sticker; one soft
+            glint sells it as a lit, glass-topped dial instead. */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            background: "radial-gradient(circle at 32% 26%, rgba(255,255,255,0.35), transparent 42%)",
+            mixBlendMode: "screen",
+            pointerEvents: "none",
           }}
         />
         <div

@@ -115,7 +115,7 @@ export function CurveEditor({
       style={{
         background: tokens.color.bg,
         borderRadius: tokens.radius.sm,
-        boxShadow: `inset 0 0 0 1px ${tokens.color.border}`,
+        boxShadow: `inset 0 1px 4px rgba(0,0,0,0.5), inset 0 0 0 1px ${tokens.color.border}`,
         cursor: "crosshair",
         touchAction: "none",
         display: "block",
@@ -144,7 +144,14 @@ export function CurveEditor({
         <line x1={0} y1={midY} x2={width} y2={midY} stroke={tokens.color.border} strokeWidth={1} strokeDasharray="2 3" />
       )}
       <path d={areaPath} fill={`url(#${fillId})`} stroke="none" />
-      <path d={path} stroke={accent} strokeWidth={1.75} fill="none" strokeLinecap="round" />
+      <path
+        d={path}
+        stroke={accent}
+        strokeWidth={1.75}
+        fill="none"
+        strokeLinecap="round"
+        style={{ filter: `drop-shadow(0 0 3px ${accent}66)` }}
+      />
       {points.map(([x, y], i) => {
         const yNorm = identity === "zero" ? y * 0.5 + 0.5 : y;
         const isDrag = i === dragIndex;

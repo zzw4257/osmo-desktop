@@ -14,6 +14,15 @@ export function GlobalStyle() {
 
       ::selection { background: ${tokens.color.accent}; color: ${tokens.color.onLight}; }
 
+      /* Keyboard-only focus ring — a real ring for keyboard nav, invisible on
+       * mouse click (:focus-visible), instead of either a mismatched native
+       * blue ring or no indicator at all. */
+      :focus-visible {
+        outline: 2px solid ${tokens.color.accent};
+        outline-offset: 2px;
+      }
+      .osmo-btn:focus-visible, .osmo-chip:focus-visible { outline-offset: 1px; }
+
       ::-webkit-scrollbar { width: 10px; height: 10px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb {
@@ -178,6 +187,20 @@ export function GlobalStyle() {
       .osmo-section-header[data-open="true"] { background: ${tokens.color.hairlineLight}; }
       .osmo-section-header:hover { background: rgba(255,255,255,0.045); }
       .osmo-section-header:active { background: rgba(255,255,255,0.02); }
+
+      /* Reduced motion means gentler, not zero — keep opacity/color feedback,
+       * drop the movement (translateY, scale) that can trigger motion sickness. */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+          scroll-behavior: auto !important;
+        }
+        .osmo-btn:active, .osmo-chip:active, .osmo-band:active, .osmo-band:hover {
+          transform: none !important;
+        }
+      }
     `}</style>
   );
 }
