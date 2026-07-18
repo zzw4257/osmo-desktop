@@ -287,7 +287,15 @@ pub fn run_export(
     let mut encoder = spawn_logged(
         Command::new(&ffmpeg)
             .args(["-v", "error", "-y"])
-            .args(["-f", "rawvideo", "-pix_fmt", "p010le", "-s", &size, "-r", &fps, "-i", "pipe:0"])
+            .args(["-f", "rawvideo", "-pix_fmt", "p010le", "-s", &size, "-r", &fps])
+            // Color tags MUST be set on the input side too: ffmpeg's
+            // hevc_videotoolbox wrapper reads color_primaries/color_trc from
+            // the decoded AVFrame's own metadata to populate the encoded
+            // HEVC VUI, not purely from output-side override flags (verified
+            // empirically — output-only flags silently write matrix_coefficients
+            // but leave primaries/transfer as "unknown" in the exported file).
+            .args(["-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709"])
+            .args(["-i", "pipe:0"])
             .args(["-i", &args.src_path])
             .args(["-map", "0:v", "-map", "1:a?", "-c:a", "copy"])
             .args(["-c:v", "hevc_videotoolbox", "-profile:v", "main10", "-b:v", &bitrate])
