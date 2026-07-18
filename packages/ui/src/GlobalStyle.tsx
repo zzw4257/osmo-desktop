@@ -94,15 +94,19 @@ export function GlobalStyle() {
       .osmo-btn:active { transform: scale(0.96); }
       .osmo-btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 
-      /* Every variant's resting look lives here (not inline) so :hover can win the cascade. */
+      /* Every variant's resting look lives here (not inline) so :hover can win the cascade.
+       * Each also gets a subtle inset top highlight — real materials catch light unevenly;
+       * a flat single fill reads as painted-on rather than a raised, physical control. */
       .osmo-btn[data-variant="primary"], .osmo-btn[data-variant="active"] {
         background: ${tokens.color.text}; color: ${tokens.color.onLight}; border-color: ${tokens.color.text};
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), ${tokens.shadow.sm};
       }
       .osmo-btn[data-variant="primary"]:hover, .osmo-btn[data-variant="active"]:hover {
         background: #e4e4e6; border-color: #e4e4e6;
       }
       .osmo-btn[data-variant="secondary"] {
         background: ${tokens.color.surfaceRaised}; color: ${tokens.color.text}; border-color: ${tokens.color.border};
+        box-shadow: inset 0 1px 0 ${tokens.color.hairlineLight};
       }
       .osmo-btn[data-variant="secondary"]:hover { background: ${tokens.color.surfaceHover}; border-color: ${tokens.color.borderStrong}; }
       .osmo-btn[data-variant="ghost"] {
@@ -111,10 +115,12 @@ export function GlobalStyle() {
       .osmo-btn[data-variant="ghost"]:hover { background: rgba(255,255,255,0.06); color: ${tokens.color.text}; }
       .osmo-btn[data-variant="danger"] {
         background: ${tokens.color.bad}; color: #fff; border-color: transparent;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), ${tokens.shadow.sm};
       }
       .osmo-btn[data-variant="danger"]:hover { background: #ff7169; }
 
       .osmo-card {
+        box-shadow: ${tokens.shadow.card};
         transition: border-color 0.15s ${tokens.ease.out}, transform 0.15s ${tokens.ease.out},
           box-shadow 0.15s ${tokens.ease.out};
       }
@@ -122,6 +128,14 @@ export function GlobalStyle() {
         border-color: ${tokens.color.borderStrong};
         transform: translateY(-2px);
         box-shadow: ${tokens.shadow.md};
+      }
+
+      /* Translucent chrome — headers/panels read as a floating material layer
+       * rather than an opaque painted rectangle. Content scrolls/renders under it. */
+      .osmo-glass {
+        background: ${tokens.color.glass};
+        backdrop-filter: ${tokens.blur.glass};
+        -webkit-backdrop-filter: ${tokens.blur.glass};
       }
 
       .osmo-fade-in { animation: osmo-fade-in 0.18s ${tokens.ease.out}; }
@@ -151,6 +165,7 @@ export function GlobalStyle() {
 
       select.osmo-select {
         transition: border-color 0.12s ${tokens.ease.out}, background 0.12s ${tokens.ease.out};
+        box-shadow: inset 0 1px 0 ${tokens.color.hairlineLight};
       }
       select.osmo-select:hover { border-color: ${tokens.color.borderStrong}; }
       select.osmo-select:focus {
@@ -158,6 +173,11 @@ export function GlobalStyle() {
         border-color: ${tokens.color.accent};
         box-shadow: ${tokens.shadow.glow};
       }
+
+      .osmo-section-header { transition: background 0.12s ${tokens.ease.out}; }
+      .osmo-section-header[data-open="true"] { background: ${tokens.color.hairlineLight}; }
+      .osmo-section-header:hover { background: rgba(255,255,255,0.045); }
+      .osmo-section-header:active { background: rgba(255,255,255,0.02); }
     `}</style>
   );
 }

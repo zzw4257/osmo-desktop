@@ -258,13 +258,16 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
     >
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <header
+          className="osmo-glass"
           style={{
             display: "flex",
             alignItems: "center",
             gap: 14,
             padding: "10px 18px",
             borderBottom: `1px solid ${tokens.color.border}`,
-            background: tokens.color.surface,
+            boxShadow: `0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 ${tokens.color.hairlineLight}`,
+            position: "relative",
+            zIndex: 1,
           }}
         >
           <Button variant="ghost" size="icon" onClick={onBack} title="返回素材库">
@@ -286,6 +289,7 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
                 border: `1px solid ${tokens.color.border}`,
                 borderRadius: tokens.radius.pill,
                 padding: 3,
+                boxShadow: `inset 0 1px 2px rgba(0,0,0,0.3)`,
               }}
             >
               {(["uvc", "rtmp"] as const).map((s) => (
@@ -351,6 +355,7 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
             padding: 16,
             minHeight: 0,
             gap: 12,
+            background: "radial-gradient(ellipse 70% 60% at 50% 42%, #0c0c0d 0%, transparent 72%)",
           }}
         >
           {rtmpUrl && (
@@ -365,6 +370,7 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
                 display: "flex",
                 gap: 12,
                 alignItems: "center",
+                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08)`,
               }}
             >
               <span>
@@ -388,7 +394,7 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
               aspectRatio: "16/9",
               background: "#000",
               borderRadius: tokens.radius.md,
-              boxShadow: tokens.shadow.lg,
+              boxShadow: `${tokens.shadow.lg}, 0 0 0 1px ${tokens.color.hairlineLight}`,
             }}
           />
         </div>
@@ -402,12 +408,15 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
       </div>
 
       <aside
+        className="osmo-glass"
         style={{
           width: 300,
           borderLeft: `1px solid ${tokens.color.border}`,
           display: "flex",
           flexDirection: "column",
-          background: tokens.color.surface,
+          boxShadow: `-8px 0 24px rgba(0,0,0,0.25), inset 1px 0 0 ${tokens.color.hairlineLight}`,
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <div

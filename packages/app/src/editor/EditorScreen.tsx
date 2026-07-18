@@ -313,13 +313,16 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
       {/* main viewer column */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <header
+          className="osmo-glass"
           style={{
             display: "flex",
             alignItems: "center",
             gap: 14,
             padding: "10px 18px",
             borderBottom: `1px solid ${tokens.color.border}`,
-            background: tokens.color.surface,
+            boxShadow: `0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 ${tokens.color.hairlineLight}`,
+            position: "relative",
+            zIndex: 1,
           }}
         >
           {onBack && (
@@ -381,6 +384,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
             justifyContent: "center",
             padding: 16,
             minHeight: 0,
+            background: "radial-gradient(ellipse 70% 60% at 50% 42%, #0c0c0d 0%, transparent 72%)",
           }}
         >
           <canvas
@@ -393,7 +397,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
               aspectRatio: "16/9",
               background: "#000",
               borderRadius: tokens.radius.md,
-              boxShadow: tokens.shadow.lg,
+              boxShadow: `${tokens.shadow.lg}, 0 0 0 1px ${tokens.color.hairlineLight}`,
             }}
           />
         </div>
@@ -426,13 +430,16 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
 
         {/* transport bar */}
         <div
+          className="osmo-glass"
           style={{
             display: "flex",
             alignItems: "center",
             gap: 10,
             padding: "10px 18px",
             borderTop: `1px solid ${tokens.color.border}`,
-            background: tokens.color.surface,
+            boxShadow: `0 -8px 24px rgba(0,0,0,0.3), inset 0 1px 0 ${tokens.color.hairlineLight}`,
+            position: "relative",
+            zIndex: 1,
           }}
         >
           <Button
@@ -520,12 +527,15 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
 
       {/* right adjust panel */}
       <aside
+        className="osmo-glass"
         style={{
           width: 300,
           borderLeft: `1px solid ${tokens.color.border}`,
           display: "flex",
           flexDirection: "column",
-          background: tokens.color.surface,
+          boxShadow: `-8px 0 24px rgba(0,0,0,0.25), inset 1px 0 0 ${tokens.color.hairlineLight}`,
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <div
@@ -578,7 +588,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
             borderRadius: tokens.radius.md,
             padding: 16,
             fontSize: 12,
-            boxShadow: tokens.shadow.lg,
+            boxShadow: `${tokens.shadow.lg}, inset 0 1px 0 ${tokens.color.hairlineLight}`,
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>

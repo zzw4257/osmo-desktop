@@ -225,13 +225,16 @@ export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps)
       }}
     >
       <header
+        className="osmo-glass"
         style={{
           display: "flex",
           alignItems: "center",
           gap: 14,
           padding: "13px 22px",
           borderBottom: `1px solid ${tokens.color.border}`,
-          background: tokens.color.surface,
+          boxShadow: `0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 ${tokens.color.hairlineLight}`,
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <h1 style={{ color: tokens.color.accent, fontSize: 16, margin: 0, fontWeight: 700, letterSpacing: 0.2 }}>
@@ -332,10 +335,24 @@ export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps)
             justifyContent: "center",
             gap: 10,
             color: tokens.color.textDim,
+            background: "radial-gradient(ellipse 60% 50% at 50% 45%, #0d0d0f 0%, transparent 70%)",
           }}
         >
-          <FilmIcon size={40} color={tokens.color.textFaint} />
-          <p style={{ fontSize: 14, margin: 0, color: tokens.color.text }}>
+          <div
+            style={{
+              width: 76,
+              height: 76,
+              borderRadius: "50%",
+              display: "grid",
+              placeItems: "center",
+              background: tokens.color.surface,
+              boxShadow: `${tokens.shadow.card}, inset 0 1px 0 ${tokens.color.hairlineLight}`,
+              marginBottom: 6,
+            }}
+          >
+            <FilmIcon size={30} color={tokens.color.textFaint} />
+          </div>
+          <p style={{ fontSize: 14, margin: 0, color: tokens.color.text, fontWeight: 500 }}>
             关联包含 DJI 素材的本地文件夹（如 SD 卡的 DCIM）
           </p>
           <p style={{ fontSize: 12, margin: 0, opacity: 0.7 }}>

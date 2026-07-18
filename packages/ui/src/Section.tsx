@@ -18,6 +18,8 @@ export function Section({ title, defaultOpen = false, badge, onReset, children }
     <div style={{ borderBottom: `1px solid ${tokens.color.border}` }}>
       <div
         onClick={() => setOpen(!open)}
+        className="osmo-section-header"
+        data-open={open}
         style={{
           display: "flex",
           alignItems: "center",

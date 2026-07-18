@@ -65,11 +65,19 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
 
   return (
     <div style={{ overflowY: "auto", flex: 1 }}>
-      <Section title="色彩还原" defaultOpen badge={grade.input.profile !== "rec709" ? grade.input.profile.toUpperCase() : undefined}>
+      <Section
+        title="色彩还原"
+        defaultOpen
+        badge={
+          grade.input.profile !== "rec709" && grade.input.profile !== "unknown"
+            ? grade.input.profile.toUpperCase()
+            : undefined
+        }
+      >
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <select
             className="osmo-select"
-            value={grade.input.profile}
+            value={grade.input.profile === "unknown" ? "rec709" : grade.input.profile}
             onChange={(e) => patchInput({ profile: e.target.value as ColorProfile })}
             style={selectStyle}
           >
