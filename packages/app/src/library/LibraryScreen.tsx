@@ -261,12 +261,23 @@ export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps)
           </>
         )}
         {supportsPicker ? (
-          <Button variant="primary" onClick={pickFolder} disabled={busy} icon={<FolderIcon size={14} />}>
+          <Button
+            variant="primary"
+            onClick={pickFolder}
+            disabled={busy}
+            icon={<FolderIcon size={14} />}
+            className={clips.length === 0 && volumes.length === 0 ? "osmo-pulse-cta" : ""}
+          >
             {busy ? "扫描中…" : "关联本地文件夹"}
           </Button>
         ) : (
           <label style={{ cursor: "pointer" }}>
-            <Button as="span" variant="primary" icon={<FolderIcon size={14} />}>
+            <Button
+              as="span"
+              variant="primary"
+              icon={<FolderIcon size={14} />}
+              className={clips.length === 0 && volumes.length === 0 ? "osmo-pulse-cta" : ""}
+            >
               关联本地文件夹
             </Button>
             <input

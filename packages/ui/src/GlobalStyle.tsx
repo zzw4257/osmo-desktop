@@ -153,6 +153,15 @@ export function GlobalStyle() {
         to { opacity: 1; transform: translateY(0); }
       }
 
+      /* Full-screen view swap (Library ↔ Editor ↔ Monitor) — a hard cut between
+       * screens reads as separate apps bolted together; a shared materialize-in
+       * gives continuity even though each screen is a fresh mount. */
+      .osmo-view-transition { animation: osmo-view-in 0.26s ${tokens.ease.out}; height: 100vh; }
+      @keyframes osmo-view-in {
+        from { opacity: 0; transform: scale(0.99); }
+        to { opacity: 1; transform: scale(1); }
+      }
+
       @keyframes osmo-spin { to { transform: rotate(360deg); } }
 
       .osmo-chip {
@@ -181,6 +190,14 @@ export function GlobalStyle() {
         outline: none;
         border-color: ${tokens.color.accent};
         box-shadow: ${tokens.shadow.glow};
+      }
+
+      /* Bridges onboarding's promise to the actual next click — a gentle pulse
+       * on the one CTA that matters when there's nothing else on screen yet. */
+      .osmo-pulse-cta { animation: osmo-pulse-cta 2.4s ease-in-out infinite; }
+      @keyframes osmo-pulse-cta {
+        0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), ${tokens.shadow.sm}, 0 0 0 0 rgba(255,214,10,0.4); }
+        50% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), ${tokens.shadow.sm}, 0 0 0 7px rgba(255,214,10,0); }
       }
 
       .osmo-section-header { transition: background 0.12s ${tokens.ease.out}; }

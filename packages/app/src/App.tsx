@@ -44,21 +44,25 @@ export function App() {
     return <div style={{ height: "100vh", background: tokens.color.bg }} />;
   }
 
+  const activeView = onboarded ? view : "onboarding";
+
   return (
     <>
       <GlobalStyle />
-      {!onboarded ? (
-        <OnboardingFlow onDone={finishOnboarding} />
-      ) : view === "monitor" ? (
-        <MonitorScreen onBack={() => setView("library")} />
-      ) : view === "editor" ? (
-        <EditorScreen initialClip={activeClip} onBack={() => setView("library")} />
-      ) : (
-        <LibraryScreen
-          onOpenClip={(clip) => void openClip(clip)}
-          onOpenMonitor={() => setView("monitor")}
-        />
-      )}
+      <div key={activeView} className="osmo-view-transition">
+        {!onboarded ? (
+          <OnboardingFlow onDone={finishOnboarding} />
+        ) : view === "monitor" ? (
+          <MonitorScreen onBack={() => setView("library")} />
+        ) : view === "editor" ? (
+          <EditorScreen initialClip={activeClip} onBack={() => setView("library")} />
+        ) : (
+          <LibraryScreen
+            onOpenClip={(clip) => void openClip(clip)}
+            onOpenMonitor={() => setView("monitor")}
+          />
+        )}
+      </div>
     </>
   );
 }
