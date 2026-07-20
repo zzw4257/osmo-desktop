@@ -493,7 +493,8 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
               borderRadius: 2,
               outline: "none",
               cursor: "pointer",
-              background: `linear-gradient(to right, ${tokens.color.accent} 0%, ${tokens.color.accent} ${
+              boxShadow: "inset 0 1px 2px rgba(0,0,0,0.35)",
+              background: `linear-gradient(to right, ${tokens.color.accentHover} 0%, ${tokens.color.accent} ${
                 (Math.max(dragUs ?? positionUs, 0) / Math.max(durationUs, 1)) * 100
               }%, ${tokens.color.border} 0%)`,
             }}

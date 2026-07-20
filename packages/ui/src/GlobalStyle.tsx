@@ -44,8 +44,9 @@ export function GlobalStyle() {
         width: 13px;
         height: 13px;
         border-radius: 50%;
-        background: #ffffff;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.15);
+        /* Glass bead, not a flat dot: a lit top-left + a darker rim sells volume. */
+        background: radial-gradient(circle at 32% 28%, #ffffff 0%, #e2e2e6 100%);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.15), inset 0 -1px 1px rgba(0,0,0,0.12);
         cursor: pointer;
         margin-top: 0;
         transition: transform 0.12s ${tokens.ease.out}, box-shadow 0.12s ${tokens.ease.out};
@@ -62,8 +63,8 @@ export function GlobalStyle() {
         height: 13px;
         border: none;
         border-radius: 50%;
-        background: #ffffff;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        background: radial-gradient(circle at 32% 28%, #ffffff 0%, #e2e2e6 100%);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.5), inset 0 -1px 1px rgba(0,0,0,0.12);
         cursor: pointer;
       }
       input[type="range"].osmo-slider::-moz-range-track {
@@ -102,6 +103,23 @@ export function GlobalStyle() {
       }
       .osmo-btn:active { transform: scale(0.96); }
       .osmo-btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
+      /* Liquid-Glass specular highlight — follows the actual cursor position
+       * (via --mx/--my, set on pointermove) rather than a fixed painted sheen,
+       * so the control genuinely "reacts to movement" instead of faking it. */
+      .osmo-btn::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgba(255,255,255,0.5), transparent 60%);
+        opacity: 0;
+        transition: opacity 0.2s ${tokens.ease.out};
+        pointer-events: none;
+      }
+      .osmo-btn:hover::after { opacity: 0.55; }
+      .osmo-btn[data-variant="ghost"]::after, .osmo-btn[data-variant="secondary"]::after {
+        background: radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgba(255,255,255,0.22), transparent 60%);
+      }
 
       /* Every variant's resting look lives here (not inline) so :hover can win the cascade.
        * Each also gets a subtle inset top highlight — real materials catch light unevenly;
@@ -217,6 +235,12 @@ export function GlobalStyle() {
         .osmo-btn:active, .osmo-chip:active, .osmo-band:active, .osmo-band:hover {
           transform: none !important;
         }
+      }
+
+      /* Frostier/solid instead of see-through when the user has asked for less
+       * transparency — the glass metaphor is decorative, legibility isn't. */
+      @media (prefers-reduced-transparency: reduce) {
+        .osmo-glass { background: ${tokens.color.surface}; backdrop-filter: none; -webkit-backdrop-filter: none; }
       }
     `}</style>
   );

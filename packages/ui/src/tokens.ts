@@ -52,3 +52,13 @@ export const tokens = {
     mono: "'SF Mono', ui-monospace, Menlo, monospace",
   },
 } as const;
+
+/**
+ * Concentric corner radius — macOS 26's "Liquid Glass" rule: a nested
+ * container's curvature should share its parent's center, i.e.
+ * innerRadius = outerRadius − padding, not an arbitrary smaller constant.
+ * Never returns below `min` so tight paddings don't collapse to a hard edge.
+ */
+export function concentricRadius(outerRadius: number, padding: number, min = 4): number {
+  return Math.max(min, outerRadius - padding);
+}

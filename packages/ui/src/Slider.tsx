@@ -61,7 +61,8 @@ export function Slider({
           borderRadius: 2,
           outline: "none",
           cursor: "pointer",
-          background: `linear-gradient(to right, ${tokens.color.accent} 0%, ${tokens.color.accent} ${pct}%, ${tokens.color.border} ${pct}%, ${tokens.color.border} 100%)`,
+          boxShadow: "inset 0 1px 2px rgba(0,0,0,0.35)",
+          background: `linear-gradient(to right, ${tokens.color.accentHover} 0%, ${tokens.color.accent} ${pct}%, ${tokens.color.border} ${pct}%, ${tokens.color.border} 100%)`,
         }}
         className="osmo-slider"
       />

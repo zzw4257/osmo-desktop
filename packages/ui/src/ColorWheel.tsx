@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { tokens } from "./tokens";
 
 export interface ColorWheelProps {
@@ -18,7 +18,7 @@ export interface ColorWheelProps {
  */
 export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: ColorWheelProps) {
   const discRef = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
+  const [dragging, setDragging] = useState(false);
 
   const [r, g, b, master] = value;
   const touched = r !== 0 || g !== 0 || b !== 0;
@@ -49,6 +49,14 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
     [onChange, master, range],
   );
 
+  // The specular glint follows the cursor (like Button's) instead of sitting at a
+  // fixed spot — a dial you can grab should feel like it's reacting to you.
+  const trackSpecular = useCallback((e: { clientX: number; clientY: number }) => {
+    const rect = discRef.current!.getBoundingClientRect();
+    discRef.current!.style.setProperty("--wx", `${((e.clientX - rect.left) / rect.width) * 100}%`);
+    discRef.current!.style.setProperty("--wy", `${((e.clientY - rect.top) / rect.height) * 100}%`);
+  }, []);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
       <span
@@ -63,12 +71,16 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
       <div
         ref={discRef}
         onPointerDown={(e) => {
-          dragging.current = true;
+          setDragging(true);
           (e.currentTarget as Element).setPointerCapture(e.pointerId);
           applyFromEvent(e);
+          trackSpecular(e);
         }}
-        onPointerMove={(e) => dragging.current && applyFromEvent(e)}
-        onPointerUp={() => (dragging.current = false)}
+        onPointerMove={(e) => {
+          trackSpecular(e);
+          if (dragging) applyFromEvent(e);
+        }}
+        onPointerUp={() => setDragging(false)}
         onDoubleClick={() => onChange([0, 0, 0, master])}
         style={{
           width: size,
@@ -84,6 +96,8 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
           background:
             "conic-gradient(from 90deg, #ff5252, #ff52ff, #5252ff, #52ffff, #52ff52, #ffff52, #ff5252)",
           filter: "saturate(0.85)",
+          transform: dragging ? "scale(0.96)" : "scale(1)",
+          transition: `transform 0.12s ${tokens.ease.out}`,
         }}
       >
         <div
@@ -94,16 +108,17 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
             background: `radial-gradient(circle, ${tokens.color.surface} 32%, transparent 78%)`,
           }}
         />
-        {/* Specular highlight — a flat conic gradient reads as a sticker; one soft
-            glint sells it as a lit, glass-topped dial instead. */}
+        {/* Specular highlight — follows the cursor (--wx/--wy) instead of sitting
+            at a fixed spot, so the glass genuinely reacts as you reach for it. */}
         <div
           style={{
             position: "absolute",
             inset: 0,
             borderRadius: "50%",
-            background: "radial-gradient(circle at 32% 26%, rgba(255,255,255,0.35), transparent 42%)",
+            background: "radial-gradient(circle at var(--wx, 32%) var(--wy, 26%), rgba(255,255,255,0.4), transparent 42%)",
             mixBlendMode: "screen",
             pointerEvents: "none",
+            transition: `background 0.05s linear`,
           }}
         />
         <div
@@ -118,7 +133,7 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
             background: tokens.color.bg,
             boxShadow: "0 1px 4px rgba(0,0,0,0.6)",
             pointerEvents: "none",
-            transition: dragging.current ? "none" : `left 0.1s ${tokens.ease.out}, top 0.1s ${tokens.ease.out}`,
+            transition: dragging ? "none" : `left 0.1s ${tokens.ease.out}, top 0.1s ${tokens.ease.out}`,
           }}
         />
       </div>
@@ -138,6 +153,7 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
           borderRadius: 2,
           outline: "none",
           cursor: "pointer",
+          boxShadow: "inset 0 1px 2px rgba(0,0,0,0.35)",
           background: `linear-gradient(to right, ${tokens.color.border} 0%, ${tokens.color.textFaint} 50%, ${tokens.color.border} 100%)`,
         }}
         title={`${label} 主控`}

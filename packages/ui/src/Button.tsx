@@ -19,6 +19,16 @@ export type ButtonProps =
  * states Mimo distinguishes: primary action, neutral chrome, quiet icon
  * button, destructive. `as="span"` renders non-interactive markup for cases
  * like a <label> wrapper, where a nested <button> would be invalid HTML. */
+/** Tracks the pointer position as CSS custom properties so the glass specular
+ * highlight (GlobalStyle's `.osmo-btn::after`) can follow the cursor — macOS 26's
+ * Liquid Glass controls "dynamically react to movement with specular highlights",
+ * not a fixed painted-on sheen. */
+function trackSpecular(e: React.PointerEvent<HTMLElement>) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${((e.clientX - rect.left) / rect.width) * 100}%`);
+  e.currentTarget.style.setProperty("--my", `${((e.clientY - rect.top) / rect.height) * 100}%`);
+}
+
 export function Button({
   as = "button",
   variant = "secondary",
@@ -40,6 +50,7 @@ export function Button({
         className={computedClassName}
         data-variant={dataVariant}
         style={computedStyle}
+        onPointerMove={trackSpecular}
         {...(rest as HTMLAttributes<HTMLSpanElement>)}
       >
         {icon}
@@ -52,6 +63,7 @@ export function Button({
       className={computedClassName}
       data-variant={dataVariant}
       style={computedStyle}
+      onPointerMove={trackSpecular}
       {...(rest as ButtonHTMLAttributes<HTMLButtonElement>)}
     >
       {icon}
@@ -60,6 +72,9 @@ export function Button({
   );
 }
 
+/** Every non-icon size is a capsule (radius = height/2) and icon buttons are
+ * true circles — macOS 26's Liquid Glass controls are pill/circle shaped,
+ * not rounded rectangles. */
 function baseStyle(size: ButtonSize): React.CSSProperties {
   switch (size) {
     case "icon":
@@ -67,7 +82,7 @@ function baseStyle(size: ButtonSize): React.CSSProperties {
         width: 34,
         height: 34,
         padding: 0,
-        borderRadius: tokens.radius.sm,
+        borderRadius: tokens.radius.pill,
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
@@ -76,8 +91,8 @@ function baseStyle(size: ButtonSize): React.CSSProperties {
     case "sm":
       return {
         height: 28,
-        padding: "0 12px",
-        borderRadius: tokens.radius.sm,
+        padding: "0 14px",
+        borderRadius: tokens.radius.pill,
         fontSize: 12,
         display: "inline-flex",
         alignItems: "center",
@@ -86,8 +101,8 @@ function baseStyle(size: ButtonSize): React.CSSProperties {
     default:
       return {
         height: 34,
-        padding: "0 16px",
-        borderRadius: tokens.radius.sm,
+        padding: "0 18px",
+        borderRadius: tokens.radius.pill,
         fontSize: 13,
         display: "inline-flex",
         alignItems: "center",
@@ -108,4 +123,6 @@ const sharedStyle: React.CSSProperties = {
   borderWidth: 1,
   borderStyle: "solid",
   whiteSpace: "nowrap",
+  position: "relative",
+  overflow: "hidden",
 };
