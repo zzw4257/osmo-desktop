@@ -15,7 +15,12 @@ export const tokens = {
     borderStrong: "#3a3a40",
     text: "#f5f5f6",
     textDim: "#95959c",
-    textFaint: "#616167",
+    /** #616167 measured 2.88:1 against `surface` — fails WCAG's 3:1 floor for
+     * UI text/icons even though it passed against `bg`, which is where it was
+     * originally eyeballed. This is where textFaint is actually used in
+     * practice (slider default values, Section icons, card metadata), so the
+     * real background is what it's tuned against. */
+    textFaint: "#707073",
     accent: "#ffd60a",
     accentHover: "#ffe248",
     accentDim: "#b39400",

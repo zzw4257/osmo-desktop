@@ -579,7 +579,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
             variant="ghost"
             size="sm"
             onClick={() => updateGrade({ ...defaultGrade(grade.input.profile) })}
-            style={{ borderRadius: tokens.radius.pill, border: `1px solid ${tokens.color.border}` }}
+            style={{ borderColor: tokens.color.border }}
           >
             全部重置
           </Button>
