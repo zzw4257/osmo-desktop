@@ -1,6 +1,7 @@
 {
   "name": "osmo-desktop-monorepo",
   "private": true,
+  "license": "MIT",
   "packageManager": "pnpm@9.11.0",
   "engines": {
     "node": ">=22"
