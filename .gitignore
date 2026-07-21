@@ -10,3 +10,6 @@ coverage/
 .vite/
 gen/schemas/
 samples/
+.playwright-mcp/
+/*.jpeg
+/*.jpg
