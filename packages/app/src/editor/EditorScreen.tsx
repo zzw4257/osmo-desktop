@@ -328,11 +328,13 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <header
           className="osmo-glass"
+          data-tauri-drag-region
           style={{
             display: "flex",
             alignItems: "center",
             gap: 14,
             padding: "10px 18px",
+            paddingLeft: isTauri() ? tokens.layout.trafficLightInset : 18,
             borderBottom: `1px solid ${tokens.color.border}`,
             boxShadow: `0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 ${tokens.color.hairlineLight}`,
             position: "relative",

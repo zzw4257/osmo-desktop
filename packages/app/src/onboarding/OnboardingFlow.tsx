@@ -55,6 +55,7 @@ export function OnboardingFlow({ onDone }: { onDone: () => void }) {
 
   return (
     <div
+      data-tauri-drag-region
       style={{
         height: "100vh",
         display: "flex",

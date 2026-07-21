@@ -56,6 +56,12 @@ export const tokens = {
       "-apple-system, BlinkMacSystemFont, system-ui, 'PingFang SC', 'Helvetica Neue', sans-serif",
     mono: "'SF Mono', ui-monospace, Menlo, monospace",
   },
+  layout: {
+    /** Left clearance for macOS's traffic-light buttons when the window uses
+     * titleBarStyle "Overlay" (native title bar hidden, buttons float over our
+     * own dark header) — apply only on the Tauri desktop shell, never on web. */
+    trafficLightInset: 78,
+  },
 } as const;
 
 /**
