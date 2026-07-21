@@ -237,7 +237,7 @@ export function LibraryScreen({ onOpenClip, onOpenMonitor }: LibraryScreenProps)
           zIndex: 1,
         }}
       >
-        <h1 style={{ color: tokens.color.accent, fontSize: 16, margin: 0, fontWeight: 700, letterSpacing: 0.2 }}>
+        <h1 style={{ color: tokens.color.accent, fontSize: 15, margin: 0, fontWeight: 700, letterSpacing: 0.2 }}>
           OSMO Desktop
         </h1>
         <span style={{ fontSize: 12, color: tokens.color.textDim }}>
@@ -499,7 +499,15 @@ function ClipCard({
         >
           {clip.name}
         </div>
-        <div style={{ fontSize: 10.5, color: tokens.color.textFaint, marginTop: 3 }}>
+        <div
+          style={{
+            fontSize: 10.5,
+            color: tokens.color.textFaint,
+            marginTop: 3,
+            fontFamily: tokens.font.mono,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
           {clip.shotAt ? new Date(clip.shotAt).toLocaleString("zh-CN") : "—"} ·{" "}
           {(clip.size / 1e6).toFixed(0)}MB
         </div>
@@ -511,6 +519,7 @@ function ClipCard({
 function Badge({ text, color }: { text: string; color: string }) {
   return (
     <span
+      className="osmo-fade-in"
       style={{
         background: "rgba(10,10,11,0.72)",
         backdropFilter: "blur(4px)",

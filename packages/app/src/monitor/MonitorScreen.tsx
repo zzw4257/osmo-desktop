@@ -403,7 +403,7 @@ export function MonitorScreen({ onBack }: MonitorScreenProps) {
           <canvas ref={histRef} width={256} height={110} style={scopeCanvas} />
           <canvas ref={waveRef} width={512} height={110} style={{ ...scopeCanvas, width: 320 }} />
           <canvas ref={vecRef} width={256} height={256} style={{ ...scopeCanvas, width: 110, height: 110 }} />
-          {error && <span style={{ color: tokens.color.bad, fontSize: 12 }}>{error}</span>}
+          {error && <span className="osmo-fade-in" style={{ color: tokens.color.bad, fontSize: 12 }}>{error}</span>}
         </div>
       </div>
 
@@ -454,6 +454,6 @@ const scopeCanvas: React.CSSProperties = {
   height: 90,
   background: "#000",
   borderRadius: tokens.radius.sm,
-  boxShadow: `inset 0 0 0 1px ${tokens.color.border}`,
+  boxShadow: `inset 0 1px 3px rgba(0,0,0,0.6), inset 0 0 0 1px ${tokens.color.border}`,
   display: "block",
 };

@@ -10,7 +10,12 @@ export function GlobalStyle() {
   return (
     <style>{`
       * { box-sizing: border-box; }
-      body { margin: 0; }
+      body {
+        margin: 0;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        font-variant-ligatures: none;
+      }
 
       ::selection { background: ${tokens.color.accent}; color: ${tokens.color.onLight}; }
 
@@ -82,7 +87,7 @@ export function GlobalStyle() {
         cursor: pointer;
         display: grid;
         place-content: center;
-        transition: background 0.12s, border-color 0.12s;
+        transition: background 0.12s ${tokens.ease.out}, border-color 0.12s ${tokens.ease.out};
       }
       input[type="checkbox"].osmo-check:checked {
         background: ${tokens.color.accent};

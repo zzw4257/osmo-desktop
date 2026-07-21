@@ -12,6 +12,7 @@ import {
   ScopesIcon,
   StepForwardIcon,
   UndoIcon,
+  concentricRadius,
   tokens,
 } from "@osmo/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -66,6 +67,11 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
   const historyRef = useRef<Grade[]>([]);
   const futureRef = useRef<Grade[]>([]);
   const lastPushRef = useRef(0);
+  // historyRef/futureRef are refs (read synchronously, no re-render on mutation) —
+  // these mirror their lengths so the undo/redo buttons can actually disable
+  // themselves instead of silently no-op'ing forever.
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const gradeRef = useRef(grade);
   gradeRef.current = grade;
 
@@ -105,6 +111,8 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
       setGrade(next);
       engine.applyGrade(next);
       persistSoon(next);
+      setCanUndo(historyRef.current.length > 0);
+      setCanRedo(futureRef.current.length > 0);
     },
     [engine, persistSoon],
   );
@@ -117,6 +125,8 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
     setGrade(prev);
     engine.applyGrade(prev);
     persistSoon(prev);
+    setCanUndo(historyRef.current.length > 0);
+    setCanRedo(futureRef.current.length > 0);
   }, [engine, persistSoon]);
 
   const redo = useCallback(() => {
@@ -127,6 +137,8 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
     setGrade(next);
     engine.applyGrade(next);
     persistSoon(next);
+    setCanUndo(historyRef.current.length > 0);
+    setCanRedo(futureRef.current.length > 0);
   }, [engine, persistSoon]);
 
   const openClip = useCallback(
@@ -143,6 +155,8 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
       engine.applyGrade(restored);
       setClipInfo(await engine.loadFile(file));
       await engine.attachScrubProxy(lrf);
+      setCanUndo(historyRef.current.length > 0);
+      setCanRedo(false);
     },
     [engine],
   );
@@ -522,7 +536,9 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
           </span>
         </div>
         {engine.error && (
-          <div style={{ color: tokens.color.bad, padding: "6px 18px", fontSize: 12 }}>{engine.error}</div>
+          <div className="osmo-fade-in" style={{ color: tokens.color.bad, padding: "6px 18px", fontSize: 12 }}>
+            {engine.error}
+          </div>
         )}
       </div>
 
@@ -553,10 +569,10 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
           }}
         >
           <span style={{ flex: 1 }}>调色</span>
-          <Button variant="ghost" size="icon" onClick={undo} title="撤销 ⌘Z" style={{ width: 26, height: 26 }}>
+          <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} title="撤销 ⌘Z" style={{ width: 26, height: 26 }}>
             <UndoIcon size={14} />
           </Button>
-          <Button variant="ghost" size="icon" onClick={redo} title="重做 ⇧⌘Z" style={{ width: 26, height: 26 }}>
+          <Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} title="重做 ⇧⌘Z" style={{ width: 26, height: 26 }}>
             <RedoIcon size={14} />
           </Button>
           <Button
@@ -647,7 +663,9 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
               <div
                 style={{
                   height: 6,
-                  borderRadius: 3,
+                  // Concentric with the card's own 12px radius minus its 16px
+                  // padding — shares the same curvature center, not an arbitrary 3px.
+                  borderRadius: concentricRadius(tokens.radius.md, 16),
                   background: tokens.color.border,
                   overflow: "hidden",
                   marginBottom: 6,
@@ -659,7 +677,7 @@ export function EditorScreen({ initialClip, onBack }: EditorScreenProps) {
                     width: `${Math.min(100, (exportState.frame / exportState.totalFrames) * 100)}%`,
                     background:
                       exportState.status === "done" ? tokens.color.good : tokens.color.accent,
-                    transition: "width 0.3s",
+                    transition: `width 0.3s ${tokens.ease.out}`,
                   }}
                 />
               </div>
@@ -687,7 +705,7 @@ const scopeCanvas: React.CSSProperties = {
   height: 90,
   background: "#000",
   borderRadius: tokens.radius.sm,
-  boxShadow: `inset 0 0 0 1px ${tokens.color.border}`,
+  boxShadow: `inset 0 1px 3px rgba(0,0,0,0.6), inset 0 0 0 1px ${tokens.color.border}`,
   display: "block",
 };
 

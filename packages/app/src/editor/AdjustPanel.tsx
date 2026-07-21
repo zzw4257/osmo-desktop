@@ -235,10 +235,11 @@ export function AdjustPanel({ grade, onChange, onPickCreativeLut, onPickInputLut
                 height: 22,
                 borderRadius: "50%",
                 cursor: "pointer",
-                background: BAND_COLORS[b],
+                // Glass bead like the slider thumb, not a flat sticker.
+                background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.55), transparent 55%), ${BAND_COLORS[b]}`,
                 boxShadow: hslBand === b
-                  ? `0 0 0 2px ${tokens.color.bg}, 0 0 0 4px ${tokens.color.text}`
-                  : "none",
+                  ? `0 0 0 2px ${tokens.color.bg}, 0 0 0 4px ${tokens.color.text}, inset 0 -1px 1px rgba(0,0,0,0.2)`
+                  : "inset 0 -1px 1px rgba(0,0,0,0.2)",
                 border: "none",
                 opacity: hslBand === b ? 1 : 0.55,
               }} />

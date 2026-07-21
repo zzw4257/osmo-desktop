@@ -109,7 +109,9 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
           }}
         />
         {/* Specular highlight — follows the cursor (--wx/--wy) instead of sitting
-            at a fixed spot, so the glass genuinely reacts as you reach for it. */}
+            at a fixed spot, so the glass genuinely reacts as you reach for it.
+            No transition: direct-manipulation content should track the pointer
+            1:1 with zero lag, the same rule Button's specular already follows. */}
         <div
           style={{
             position: "absolute",
@@ -118,7 +120,6 @@ export function ColorWheel({ label, value, onChange, size = 96, range = 0.35 }: 
             background: "radial-gradient(circle at var(--wx, 32%) var(--wy, 26%), rgba(255,255,255,0.4), transparent 42%)",
             mixBlendMode: "screen",
             pointerEvents: "none",
-            transition: `background 0.05s linear`,
           }}
         />
         <div
