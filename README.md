@@ -1,7 +1,13 @@
 <a id="readme-top"></a>
 
+<p align="right"><a href="README.en.md">English</a> · 简体中文</p>
+
 <p align="center">
-  <img src="docs/assets/logo.png" alt="OSMO Desktop" width="140">
+  <img src="docs/assets/readme-hero.jpg" alt="OSMO Desktop — 色轮主视觉" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/assets/logo.png" alt="OSMO Desktop" width="88">
 </p>
 
 <h3 align="center">OSMO Desktop</h3>
@@ -13,7 +19,7 @@
   ·
   <a href="#功能全景"><strong>功能</strong></a>
   ·
-  <a href="#架构要点"><strong>架构</strong></a>
+  <a href="#架构"><strong>架构</strong></a>
   ·
   <a href="#真机验证"><strong>真机验证</strong></a>
   ·
@@ -29,7 +35,7 @@
   <a href="https://github.com/zzw4257/osmo-desktop/actions/workflows/ci.yml"><img src="https://github.com/zzw4257/osmo-desktop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
 
-一套代码双端发布：**Tauri 2 桌面应用** + **网页应用**，调色数学单一来源——同一段 WGSL 跑遍实时预览、网页导出与原生桌面导出，不存在"预览一个样子、导出另一个样子"的常见坑。
+一套代码双端发布：**Tauri 2 桌面应用** + **网页应用**，调色数学单一来源——同一段 WGSL 跑遍实时预览、网页导出与原生桌面导出，预览与导出用的永远是同一个结果。
 
 <p align="center">
   <img src="docs/assets/screenshot-editor.png" alt="OSMO Desktop 调色面板：色轮、影调、滤镜、示波器" width="820">
@@ -57,7 +63,7 @@ DJI Mimo 手机 App 的调色只有几根滑块；专业剪辑软件（Resolve/P
 | 播放 | 4K HEVC 10-bit 硬解 30fps、流式解封装（多 GB 文件不驻留内存）、LRF 代理 scrub、逐帧、⌘Z 撤销/重做（持久化） |
 | 导出 | 桌面：ffmpeg⇄wgpu 原生管线 **10-bit 保真**（实测 877/939 灰阶）；网页：WebCodecs 能力阶梯（HEVC→H.264）+ 音频无损 remux，成片如实标注编码档位 |
 | 监看 | 相机网络摄像头模式实时取流 → 调色管线 + 示波器 = 带 LUT 预览的现场监视器（按设备记忆调色） |
-| 引导 | 首次启动的分步引导（色轮/连接设备/D-Log 色彩科学/素材库预览），每步都是应用真实组件的微缩预览，不是插画 |
+| 引导 | 首次启动的分步引导（色轮/连接设备/D-Log 色彩科学/素材库预览），每步都用应用真实组件渲染的微缩预览 |
 
 ## 快速开始
 
@@ -85,7 +91,7 @@ pnpm exec tsx tooling/scripts/gen-export-job.ts <src.mp4> <out.mp4> 3840 2160 30
 
 </details>
 
-## 架构要点
+## 架构
 
 - **单一数学源**：调色数学只存在于 WGSL 核心（`packages/color-engine/src/pipeline/gradeCore.ts`）
   与 TS 打包器；预览 fragment、网页导出、Rust 原生 wgpu compute 三个外壳拼接同一段 WGSL，
@@ -101,16 +107,44 @@ pnpm exec tsx tooling/scripts/gen-export-job.ts <src.mp4> <out.mp4> 3840 2160 30
 
 ```mermaid
 flowchart LR
-    subgraph Preview["实时预览（双端）"]
-        A[WebCodecs 解码] --> B[WebGPU 渲染]
+    subgraph Sources["素材来源"]
+        A1["DJI Pocket 4<br/>USB DCIM"]
+        A2["本地文件夹 / SD 卡"]
+        A3["监看：UVC 摄像头<br/>桌面另支持无线 RTMP"]
     end
-    subgraph Export["原生导出（桌面）"]
-        C[ffmpeg 解码 rawvideo P010] --> D[wgpu compute]
-        D --> E[ffmpeg VideoToolbox 硬编 10-bit]
+
+    subgraph Shells["双端外壳"]
+        B1["网页端<br/>apps/web (Vite)"]
+        B2["桌面端<br/>apps/desktop (Tauri 2 + Rust)"]
     end
-    G[["WGSL 调色核心\n(gradeCore.ts 单一来源)"]]
-    G -.拼接进.-> B
-    G -.拼接进.-> D
+
+    subgraph Preview["实时预览"]
+        C1["WebCodecs 解码"]
+        C2["WebGPU 渲染<br/>桌面 ~9bit · 网页 8bit"]
+    end
+
+    subgraph Export["导出"]
+        D1["WebCodecs 编码<br/>网页 · 能力阶梯"]
+        D2["ffmpeg → wgpu compute → VideoToolbox<br/>桌面 · 原生 10-bit"]
+    end
+
+    W{{"WGSL 调色核心<br/>gradeCore.ts 单一来源"}}
+    E[("IndexedDB<br/>grade · 撤销历史 · 素材生命周期")]
+
+    A1 --> B2
+    A2 --> B1 & B2
+    A3 --> B1 & B2
+
+    B1 --> C1 & D1
+    B2 --> C1 & D2
+    C1 --> C2
+
+    W -.拼接进.-> C2
+    W -.拼接进.-> D2
+
+    C2 --> E
+    D1 --> E
+    D2 --> E
 ```
 
 ## 真机验证
