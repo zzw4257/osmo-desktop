@@ -9,7 +9,14 @@ coverage/
 .env
 .vite/
 gen/schemas/
-samples/
+# generated 4K test clips stay local-only (regenerate via gen-samples.sh);
+# fake-dcim/ is a tiny tracked fixture the Rust test suite depends on in CI.
+# (leading slash anchors to repo root — otherwise apps/*/public/samples/ dev
+# copies would fall outside these rules entirely)
+/samples/*
+!/samples/fake-dcim/
+!/samples/fake-dcim/**
+apps/*/public/samples/
 .playwright-mcp/
 /*.jpeg
 /*.jpg
