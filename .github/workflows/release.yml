@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            arch_label: Apple Silicon
+          - target: x86_64-apple-darwin
+            arch_label: Intel
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.11.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: 'OSMO Desktop ${{ github.ref_name }}'
+          releaseBody: |
+            自动构建（${{ matrix.arch_label }}）。未做代码签名/公证 —— 首次打开需在「系统设置 → 隐私与安全性」允许，或执行：
+
+            ```bash
+            xattr -cr "/Applications/OSMO Desktop.app"
+            ```
+
+            详见 [README](https://github.com/${{ github.repository }}#readme)。
+          releaseDraft: true
+          prerelease: false
+          args: --target ${{ matrix.target }}
